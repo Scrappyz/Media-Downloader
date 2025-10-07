@@ -22,7 +22,7 @@ public class MediaDownloader {
     private static final Logger logger = LoggerFactory.getLogger(MediaDownloader.class);
 
     public static final Path executablePath = Paths.get("./src/main/resources/executables/yt-dlp.exe").toAbsolutePath().normalize();
-    public static final Path downloadPath = Paths.get("./src/main/resources/temp").toAbsolutePath().normalize();
+    public static final Path downloadPath = Paths.get("./temp").toAbsolutePath().normalize();
 
     private static List<String> commands = new ArrayList<>(Arrays.asList(executablePath.toString()));
  
