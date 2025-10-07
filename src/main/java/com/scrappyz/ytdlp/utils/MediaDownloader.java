@@ -15,11 +15,11 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.apache.commons.io.FileUtils;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
+// import org.slf4j.LoggerFactory;
+// import org.slf4j.Logger;
 
 public class MediaDownloader {
-    public static final Logger logger = LoggerFactory.getLogger(MediaDownloader.class);
+    // public static final Logger logger = LoggerFactory.getLogger(MediaDownloader.class);
 
     public static final Path executablePath = Paths.get("./src/main/resources/executables/yt-dlp.exe").toAbsolutePath().normalize();
     public static final Path downloadPath = Paths.get("./temp").toAbsolutePath().normalize();
@@ -90,9 +90,6 @@ public class MediaDownloader {
         if(isAudioOnly && audCodec.isEmpty()) {
             audCodec = "mp3"; // Assume mp3
         }
-
-        if(isVideo) logger.info("Is Video");
-        else logger.info("Bad");
 
         if(isVideo) {
             commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));

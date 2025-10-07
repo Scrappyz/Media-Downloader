@@ -50,7 +50,8 @@ public class ApiController {
 
         Path path = MediaDownloader.downloadPath.resolve(request.getOutputName());
         ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(path));
-        // MediaDownloader.logger.info(path.toString());
+
+        MediaDownloader.cleanDownloads(); // Clean up the download path
 
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + request.getOutputName());
