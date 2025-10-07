@@ -1,5 +1,8 @@
 package com.scrappyz.ytdlp.utils;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -11,10 +14,15 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.commons.io.FileUtils;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+
 public class MediaDownloader {
+    private static final Logger logger = LoggerFactory.getLogger(MediaDownloader.class);
 
     public static final Path executablePath = Paths.get("./src/main/resources/executables/yt-dlp.exe").toAbsolutePath().normalize();
-    public static final Path downloadPath = Paths.get("./src/main/resources/temp").toAbsolutePath().normalize(); 
+    public static final Path downloadPath = Paths.get("./src/main/resources/temp").toAbsolutePath().normalize();
 
     private static List<String> commands = new ArrayList<>(Arrays.asList(executablePath.toString()));
  
@@ -31,7 +39,7 @@ public class MediaDownloader {
     );
 
     public enum Type {
-        VIDEO_AUDIO("video_audio"),
+        VIDEO("video"),
         VIDEO_ONLY("video_only"),
         AUDIO_ONLY("audio_only");
 
@@ -72,7 +80,7 @@ public class MediaDownloader {
 
         Type t = Type.getType(type);
 
-        boolean isVideo = (t == Type.VIDEO_AUDIO || t == Type.VIDEO_ONLY);
+        boolean isVideo = (t == Type.VIDEO || t == Type.VIDEO_ONLY);
         boolean isVideoOnly = t == Type.VIDEO_ONLY;
         boolean isAudioOnly = t == Type.AUDIO_ONLY;
 
@@ -83,6 +91,9 @@ public class MediaDownloader {
             audCodec = "mp3"; // Assume mp3
         }
 
+        if(isVideo) logger.info("Is Video");
+        else logger.info("Bad");
+
         if(isVideo) {
             commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));
         } else if(isVideoOnly) {
@@ -91,37 +102,43 @@ public class MediaDownloader {
             commands.addAll(Arrays.asList("--audio-format", audCodec, "--audio-quality", "0", "-x"));
         }
 
-        // StringBuilder format = new StringBuilder();
-
         commands.addAll(Arrays.asList(url, "-P", downloadPath.toString()));
 
         if(!outputName.isEmpty()) {
             commands.addAll(Arrays.asList("-o", outputName));
         }
 
-        return String.join(" ", commands);
+        // return String.join(" ", commands);
 
-        // StringBuilder output = new StringBuilder();
+        StringBuilder output = new StringBuilder();
 
-        // try {
-        //     ProcessBuilder pb = new ProcessBuilder(commands);
+        try {
+            ProcessBuilder pb = new ProcessBuilder(commands);
 
-        //     Process process = pb.start();
+            Process process = pb.start();
 
-        //     BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
-        //     String line;
+            String line;
 
-        //     while ((line = reader.readLine()) != null) {
-        //         output.append(line).append("\n");
-        //     }
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
 
-        //     int exitCode = process.waitFor();
-        // } catch(IOException | InterruptedException e) {
-        //     return "Something went wrong";
-        // }
+            int exitCode = process.waitFor();
+        } catch(IOException | InterruptedException e) {
+            return "Something went wrong";
+        }
 
-        // return output.toString();
+        return output.toString();
+    }
+
+    public static void cleanDownloads() {
+        try {
+            FileUtils.cleanDirectory(downloadPath.toFile());
+        } catch(IllegalArgumentException | IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static int resolveVideoQuality(int vidQuality) {

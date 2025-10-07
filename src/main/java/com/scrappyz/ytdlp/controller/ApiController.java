@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.utils.MediaDownloader;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @RestController
 public class ApiController {
@@ -29,6 +31,12 @@ public class ApiController {
                 request.getAudioCodec(), request.getAudioBitrate(), request.getOutputName()));
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @GetMapping("/remove")
+    public String cleanTemp() {
+        MediaDownloader.cleanDownloads();
+        return "Success";
     }
     
 }
