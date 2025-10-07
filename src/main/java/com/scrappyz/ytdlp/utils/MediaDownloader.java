@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
 public class MediaDownloader {
-    private static final Logger logger = LoggerFactory.getLogger(MediaDownloader.class);
+    public static final Logger logger = LoggerFactory.getLogger(MediaDownloader.class);
 
     public static final Path executablePath = Paths.get("./src/main/resources/executables/yt-dlp.exe").toAbsolutePath().normalize();
     public static final Path downloadPath = Paths.get("./temp").toAbsolutePath().normalize();
