@@ -5,11 +5,6 @@ import lombok.Setter;
 
 @Getter @Setter
 public class DownloadResponse {
-    private String requestType;
-    private String url;
-    private int videoQuality;
-    private String audioCodec;
-    private int audioBitrate;
-    private String outputName;
-    private String downloadResponse;
+    private int error;
+    private String errorMessage;
 }
