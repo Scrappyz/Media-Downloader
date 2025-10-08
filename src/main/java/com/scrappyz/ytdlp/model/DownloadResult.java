@@ -1,6 +1,6 @@
 package com.scrappyz.ytdlp.model;
 
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,6 +10,6 @@ public class DownloadResult {
     
     int error;
     String message;
-    ByteArrayResource resource;
+    Resource resource;
 
 }

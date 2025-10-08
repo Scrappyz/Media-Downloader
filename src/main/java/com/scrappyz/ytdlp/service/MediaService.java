@@ -17,19 +17,27 @@ import java.util.TreeSet;
 
 import org.apache.commons.io.FileUtils;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 
+import com.scrappyz.ytdlp.interceptor.MediaControllerInterceptor;
 import com.scrappyz.ytdlp.model.DownloadResult;
+
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 @Service
 public class MediaService {
+
+    private static final Logger logger = LoggerFactory.getLogger(MediaService.class);
     
     public static final Path executablePath = Paths.get("./src/main/resources/executables/yt-dlp.exe").toAbsolutePath().normalize();
     public static final Path downloadPath = Paths.get("./temp").toAbsolutePath().normalize();
 
-    private List<String> commands = new ArrayList<>(Arrays.asList(executablePath.toString()));
+    // BAD: Gets modified everytime `download` gets called
+    // private List<String> commands = new ArrayList<>(Arrays.asList(executablePath.toString()));
  
-    private final SortedSet<Integer> videoQuality = new TreeSet<>(
+    private static final SortedSet<Integer> videoQuality = new TreeSet<>(
         Arrays.asList(144, 240, 360, 480, 720, 1080, 2140) // height in pixels (p)
     );
 
@@ -69,7 +77,7 @@ public class MediaService {
     };
 
     private int resolveVideoQuality(int vidQuality) {
-        Iterator<Integer> iterator = audioBitrate.iterator();
+        Iterator<Integer> iterator = videoQuality.iterator();
         int firstValue = iterator.next();
 
         if(vidQuality < firstValue) return -1;
@@ -151,6 +159,9 @@ public class MediaService {
             audCodec = "mp3"; // Assume mp3
         }
 
+        List<String> commands = new ArrayList<>();
+        commands.add(executablePath.toString());
+
         if(isVideo) {
             commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));
         } else if(isVideoOnly) {
@@ -164,6 +175,8 @@ public class MediaService {
         if(!outputName.isEmpty()) {
             commands.addAll(Arrays.asList("-o", outputName));
         }
+
+        logger.debug("[COMMANDS] " + String.join(" ", commands));
 
         // return String.join(" ", commands);
 
@@ -189,20 +202,12 @@ public class MediaService {
         }
 
         Path resourcePath = downloadPath.resolve(outputName).normalize();
-        
-        try {
-            result.setResource(new ByteArrayResource(Files.readAllBytes(resourcePath)));
-        } catch(IOException e) {
-            result.setError(1);
-            result.setMessage(e.getMessage());
-        }
-
-        cleanDownloads();
+        result.setResource(new FileSystemResource(resourcePath));
 
         return result;
     }
 
-    public void cleanDownloads() {
+    public static void cleanDownloads() {
         try {
             FileUtils.cleanDirectory(downloadPath.toFile());
         } catch(IllegalArgumentException | IOException e) {

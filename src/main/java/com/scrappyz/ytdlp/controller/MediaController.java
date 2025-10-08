@@ -22,10 +22,10 @@ public class MediaController {
 
     private final MediaService mediaService;
     
-    // @GetMapping("/print")
-    // public String print() {
-    //     return MediaDownloader.executablePath.toString();
-    // }
+    @GetMapping("/print")
+    public ResponseEntity<String> print() {
+        return ResponseEntity.ok().body(MediaService.executablePath.toString());
+    }
 
     @GetMapping("/download")
     public ResponseEntity<Object> download(@RequestBody DownloadRequest request) {
