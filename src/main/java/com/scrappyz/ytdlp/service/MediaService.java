@@ -16,11 +16,9 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.apache.commons.io.FileUtils;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 
-import com.scrappyz.ytdlp.interceptor.MediaControllerInterceptor;
 import com.scrappyz.ytdlp.model.DownloadResult;
 
 import org.slf4j.LoggerFactory;
@@ -29,7 +27,7 @@ import org.slf4j.Logger;
 @Service
 public class MediaService {
 
-    private static final Logger logger = LoggerFactory.getLogger(MediaService.class);
+    private static final Logger log = LoggerFactory.getLogger(MediaService.class);
     
     public static final Path executablePath = Paths.get("./src/main/resources/executables/yt-dlp.exe").toAbsolutePath().normalize();
     public static final Path downloadPath = Paths.get("./temp").toAbsolutePath().normalize();
@@ -144,6 +142,7 @@ public class MediaService {
         if(url.isEmpty()) {
             result.setError(1);
             result.setMessage("No url provided");
+            return result;
         }
 
         MediaType t = MediaType.getMediaType(type);
@@ -176,7 +175,7 @@ public class MediaService {
             commands.addAll(Arrays.asList("-o", outputName));
         }
 
-        logger.debug("[COMMANDS] " + String.join(" ", commands));
+        log.debug("[COMMANDS] " + String.join(" ", commands));
 
         // return String.join(" ", commands);
 
