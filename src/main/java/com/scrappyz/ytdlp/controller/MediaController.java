@@ -45,7 +45,7 @@ public class MediaController {
         return ResponseEntity.ok().body(temp);
     }
 
-    @GetMapping("/")
+    @GetMapping
     public ResponseEntity<DownloadResponse> download(@RequestBody DownloadRequest request) {
         String id = mediaService.enqueue(request);
         DownloadResponse response = new DownloadResponse();
@@ -63,6 +63,7 @@ public class MediaController {
 
         if(future.isDone()) {
             result = future.getNow(result);
+            mediaService.cancelProcess(processId);
         }
 
         if(result.getStatus().equals("failed")) {
@@ -75,7 +76,7 @@ public class MediaController {
 
     @GetMapping("/get/{resourceName}")
     public ResponseEntity<Object> getResource(@PathVariable String resourceName,
-        @RequestParam(name = "output", required = false) String outputName) {
+        @RequestParam(name = "output", required = false, defaultValue = "") String outputName) {
 
         HttpHeaders headers = new HttpHeaders();
         FileSystemResource resource;
@@ -94,7 +95,13 @@ public class MediaController {
         int extensionIndex = resourceName.lastIndexOf('.');
         String extension = resourceName.substring(extensionIndex);
 
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + outputName + extension);
+        if(outputName.isEmpty()) {
+            outputName = resourceName;
+        }
+
+        outputName += extension;
+
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + outputName);
 
         return ResponseEntity.ok().headers(headers).body(resource);
     }

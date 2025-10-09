@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -66,6 +67,9 @@ public class MediaService {
 
     private final ConcurrentHashMap<String, CompletableFuture<DownloadResult>> processes = new ConcurrentHashMap<>();
 
+    @Value("${resource.expiry.time:120000}")
+    private long resourceExpiryTime;
+
     public enum MediaType {
         VIDEO("video"),
         VIDEO_ONLY("video_only"),
@@ -93,6 +97,7 @@ public class MediaService {
         }
     };
 
+    // ---HELPER METHODS---
     private int resolveVideoQuality(int vidQuality) {
         Iterator<Integer> iterator = videoQuality.iterator();
         int firstValue = iterator.next();
@@ -146,12 +151,14 @@ public class MediaService {
 
         return audBitrate;
     }
+    // ---HELPER METHODS---
 
+    // Queue the download request
     public String enqueue(DownloadRequest request) {
         String id = UlidCreator.getMonotonicUlid().toString();
-        CompletableFuture<DownloadResult> f = async.download(id, request);
+        CompletableFuture<DownloadResult> f = async.download(id, request); // Run in the background
 
-        processes.put(id, f);
+        processes.put(id, f); // Keep track of the process with an id
 
         return id;
     }
@@ -165,12 +172,6 @@ public class MediaService {
     // For audio only: yt-dlp --audio-format mp3 --audio-quality 0 -x url
     @Async("downloadExecutor")
     public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) {
-
-        // try {
-        //     Thread.sleep(1000 * 20);
-        // } catch(InterruptedException e) {
-        //     e.printStackTrace();
-        // }
 
         DownloadResult result = new DownloadResult();
 
@@ -250,6 +251,10 @@ public class MediaService {
 
         result.setDownloadResourceName(outputName);
         result.setStatus("success");
+
+        async.expireResource(outputName); // Remove in set time (ms)
+
+        // processes.remove(id); // Remove from processes once finished
         
         return CompletableFuture.completedFuture(result);
     }
@@ -263,7 +268,9 @@ public class MediaService {
     }
 
     public boolean cancelProcess(String id) {
-        return processes.get(id).cancel(true);
+        boolean b = processes.get(id).cancel(true);
+        processes.remove(id);
+        return b;
     }
 
     public FileSystemResource getResource(String resourceName) throws FileNotFoundException {
@@ -277,9 +284,9 @@ public class MediaService {
     }
 
     @Async("resourceExecutor")
-    public CompletableFuture<Boolean> removeResourceOn(String resourceName, int duration) {
+    public CompletableFuture<Boolean> expireResource(String resourceName) { // Delete downloaded resource after a certain time
         try {
-            Thread.sleep(duration);
+            Thread.sleep(resourceExpiryTime);
         } catch(InterruptedException e) {
             e.printStackTrace();
         }
@@ -291,14 +298,6 @@ public class MediaService {
         } catch(IOException e) {
             e.printStackTrace();
             return CompletableFuture.failedFuture(e);
-        }
-    }
-
-    public static void cleanDownloads() {
-        try {
-            FileUtils.cleanDirectory(downloadPath.toFile());
-        } catch(IllegalArgumentException | IOException e) {
-            e.printStackTrace();
         }
     }
 }
