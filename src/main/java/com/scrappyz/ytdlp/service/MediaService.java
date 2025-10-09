@@ -14,20 +14,35 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.io.FileUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.scrappyz.ytdlp.model.DownloadResult;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.springframework.context.annotation.Lazy;
+
+import com.github.f4b6a3.ulid.Ulid;
+import com.github.f4b6a3.ulid.UlidCreator;
+
+import com.scrappyz.ytdlp.dto.DownloadRequest;
+import com.scrappyz.ytdlp.utils.ThreadUtils;
 
 @Service
 public class MediaService {
 
     private static final Logger log = LoggerFactory.getLogger(MediaService.class);
+
+    @Lazy
+    @Autowired
+    private MediaService async; // Allow us to execute the asynch method
     
     public static final Path executablePath = Paths.get(System.getProperty("user.dir")).resolve("bin/yt-dlp.exe").toAbsolutePath().normalize();
     public static final Path downloadPath = Paths.get(System.getProperty("user.dir")).resolve("storage/private/downloads").toAbsolutePath().normalize();
@@ -46,6 +61,8 @@ public class MediaService {
     private static final SortedSet<Integer> audioBitrate = new TreeSet<>(
         Arrays.asList(32, 64, 96, 128, 160, 192, 256, 320) // kbps
     );
+
+    private final ConcurrentHashMap<String, CompletableFuture<DownloadResult>> processes = new ConcurrentHashMap<>();
 
     public enum MediaType {
         VIDEO("video"),
@@ -128,82 +145,114 @@ public class MediaService {
         return audBitrate;
     }
 
+    public String enqueue(DownloadRequest request) {
+        String id = UlidCreator.getMonotonicUlid().toString();
+        CompletableFuture<DownloadResult> f = async.download(id, request);
+        processes.put(id, f);
+        log.info("[ENQUEUE] " + id + " has been queued");
+        return id;
+    }
+
     // Methods:
     // Video + Audio
     // Video Only
     // Audio Only
-    public DownloadResult download(String url, String type, int vidQuality, String audCodec, int audBitrate, String outputName) {
-        // For video + audio: yt-dlp -f best -S height:720 https://youtu.be/0LV7y_HnQr4?si=dmTkA17cgIxIy_Us
-        // For video only: yt-dlp -f bv -S height:720 https://youtu.be/0LV7y_HnQr4?si=dmTkA17cgIxIy_Us
-        // For audio only: yt-dlp --audio-format mp3 --audio-quality 0 -x url
+    // For video + audio: yt-dlp -f best -S height:720 https://youtu.be/0LV7y_HnQr4?si=dmTkA17cgIxIy_Us
+    // For video only: yt-dlp -f bv -S height:720 https://youtu.be/0LV7y_HnQr4?si=dmTkA17cgIxIy_Us
+    // For audio only: yt-dlp --audio-format mp3 --audio-quality 0 -x url
+    @Async("downloadExecutor")
+    public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) {
+        // log.info("[THREAD CURRENT] " + Thread.currentThread().getName());
+        // Thread.currentThread().setName("download-" + id);
 
-        DownloadResult result = new DownloadResult();
-
-        if(url.isEmpty()) {
-            result.setError(1);
-            result.setMessage("No url provided");
-            return result;
-        }
-
-        MediaType t = MediaType.getMediaType(type);
-
-        boolean isVideo = (t == MediaType.VIDEO || t == MediaType.VIDEO_ONLY);
-        boolean isVideoOnly = t == MediaType.VIDEO_ONLY;
-        boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
-
-        vidQuality = resolveVideoQuality(vidQuality);
-        audBitrate = resolveAudioBitrate(audBitrate);
-
-        if(isAudioOnly && audCodec.isEmpty()) {
-            audCodec = "mp3"; // Assume mp3
-        }
-
-        List<String> commands = new ArrayList<>();
-        commands.add(executablePath.toString());
-
-        if(isVideo) {
-            commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));
-        } else if(isVideoOnly) {
-            commands.addAll(Arrays.asList("-f", "bv", "-S", String.format("height:%d", vidQuality)));
-        } else if(isAudioOnly) {
-            commands.addAll(Arrays.asList("--audio-format", audCodec, "--audio-quality", "0", "-x"));
-        }
-
-        commands.addAll(Arrays.asList(url, "-P", downloadPath.toString()));
-
-        if(!outputName.isEmpty()) {
-            commands.addAll(Arrays.asList("-o", outputName));
-        }
-
-        log.debug("[COMMANDS] " + String.join(" ", commands));
-
-        // return String.join(" ", commands);
-
-        StringBuilder output = new StringBuilder();
+        // String threadName = Thread.currentThread().getName();
+        // log.info("[THREAD NEW] " + threadName);
 
         try {
-            ProcessBuilder pb = new ProcessBuilder(commands);
-
-            Process process = pb.start();
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-
-            int exitCode = process.waitFor();
-        } catch(IOException | InterruptedException e) {
-            result.setError(1);
-            result.setMessage(e.getMessage());
+            Thread.sleep(1000 * 20);
+        } catch(InterruptedException e) {
+            e.printStackTrace();
         }
 
-        Path resourcePath = downloadPath.resolve(outputName).normalize();
-        result.setResource(new FileSystemResource(resourcePath));
+        DownloadResult result = new DownloadResult();
+        CompletableFuture<DownloadResult> f = CompletableFuture.completedFuture(result);
+        return f;
+        // String url = request.getUrl();
+        // String type = request.getRequestType();
+        // int vidQuality = request.getVideoQuality();
+        // String audCodec = request.getAudioCodec();
+        // int audBitrate = request.getAudioBitrate();
+        // String outputName = request.getOutputName();
 
-        return result;
+        // if(url.isEmpty()) {
+        //     result.setError(1);
+        //     result.setMessage("No url provided");
+        //     return result;
+        // }
+
+        // MediaType t = MediaType.getMediaType(type);
+
+        // boolean isVideo = (t == MediaType.VIDEO || t == MediaType.VIDEO_ONLY);
+        // boolean isVideoOnly = t == MediaType.VIDEO_ONLY;
+        // boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
+
+        // vidQuality = resolveVideoQuality(vidQuality);
+        // audBitrate = resolveAudioBitrate(audBitrate);
+
+        // if(isAudioOnly && audCodec.isEmpty()) {
+        //     audCodec = "mp3"; // Assume mp3
+        // }
+
+        // List<String> commands = new ArrayList<>();
+        // commands.add(executablePath.toString());
+
+        // if(isVideo) {
+        //     commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));
+        // } else if(isVideoOnly) {
+        //     commands.addAll(Arrays.asList("-f", "bv", "-S", String.format("height:%d", vidQuality)));
+        // } else if(isAudioOnly) {
+        //     commands.addAll(Arrays.asList("--audio-format", audCodec, "--audio-quality", "0", "-x"));
+        // }
+
+        // commands.addAll(Arrays.asList(url, "-P", downloadPath.toString()));
+
+        // if(!outputName.isEmpty()) {
+        //     commands.addAll(Arrays.asList("-o", outputName));
+        // }
+
+        // log.debug("[COMMANDS] " + String.join(" ", commands));
+
+        // // return String.join(" ", commands);
+
+        // StringBuilder output = new StringBuilder();
+
+        // try {
+        //     ProcessBuilder pb = new ProcessBuilder(commands);
+
+        //     Process process = pb.start();
+
+        //     BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        //     String line;
+
+        //     while ((line = reader.readLine()) != null) {
+        //         output.append(line).append("\n");
+        //     }
+
+        //     int exitCode = process.waitFor();
+        // } catch(IOException | InterruptedException e) {
+        //     result.setError(1);
+        //     result.setMessage(e.getMessage());
+        // }
+
+        // Path resourcePath = downloadPath.resolve(outputName).normalize();
+        // result.setResource(new FileSystemResource(resourcePath));
+
+        
+    }
+
+    public CompletableFuture<DownloadResult> getProcess(String id) {
+        return processes.get(id);
     }
 
     public static void cleanDownloads() {
