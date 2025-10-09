@@ -1,6 +1,8 @@
 package com.scrappyz.ytdlp.service;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
@@ -148,8 +150,9 @@ public class MediaService {
     public String enqueue(DownloadRequest request) {
         String id = UlidCreator.getMonotonicUlid().toString();
         CompletableFuture<DownloadResult> f = async.download(id, request);
+
         processes.put(id, f);
-        log.info("[ENQUEUE] " + id + " has been queued");
+
         return id;
     }
 
@@ -162,97 +165,133 @@ public class MediaService {
     // For audio only: yt-dlp --audio-format mp3 --audio-quality 0 -x url
     @Async("downloadExecutor")
     public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) {
-        // log.info("[THREAD CURRENT] " + Thread.currentThread().getName());
-        // Thread.currentThread().setName("download-" + id);
-
-        // String threadName = Thread.currentThread().getName();
-        // log.info("[THREAD NEW] " + threadName);
-
-        try {
-            Thread.sleep(1000 * 20);
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        DownloadResult result = new DownloadResult();
-        CompletableFuture<DownloadResult> f = CompletableFuture.completedFuture(result);
-        return f;
-        // String url = request.getUrl();
-        // String type = request.getRequestType();
-        // int vidQuality = request.getVideoQuality();
-        // String audCodec = request.getAudioCodec();
-        // int audBitrate = request.getAudioBitrate();
-        // String outputName = request.getOutputName();
-
-        // if(url.isEmpty()) {
-        //     result.setError(1);
-        //     result.setMessage("No url provided");
-        //     return result;
-        // }
-
-        // MediaType t = MediaType.getMediaType(type);
-
-        // boolean isVideo = (t == MediaType.VIDEO || t == MediaType.VIDEO_ONLY);
-        // boolean isVideoOnly = t == MediaType.VIDEO_ONLY;
-        // boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
-
-        // vidQuality = resolveVideoQuality(vidQuality);
-        // audBitrate = resolveAudioBitrate(audBitrate);
-
-        // if(isAudioOnly && audCodec.isEmpty()) {
-        //     audCodec = "mp3"; // Assume mp3
-        // }
-
-        // List<String> commands = new ArrayList<>();
-        // commands.add(executablePath.toString());
-
-        // if(isVideo) {
-        //     commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));
-        // } else if(isVideoOnly) {
-        //     commands.addAll(Arrays.asList("-f", "bv", "-S", String.format("height:%d", vidQuality)));
-        // } else if(isAudioOnly) {
-        //     commands.addAll(Arrays.asList("--audio-format", audCodec, "--audio-quality", "0", "-x"));
-        // }
-
-        // commands.addAll(Arrays.asList(url, "-P", downloadPath.toString()));
-
-        // if(!outputName.isEmpty()) {
-        //     commands.addAll(Arrays.asList("-o", outputName));
-        // }
-
-        // log.debug("[COMMANDS] " + String.join(" ", commands));
-
-        // // return String.join(" ", commands);
-
-        // StringBuilder output = new StringBuilder();
 
         // try {
-        //     ProcessBuilder pb = new ProcessBuilder(commands);
-
-        //     Process process = pb.start();
-
-        //     BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-        //     String line;
-
-        //     while ((line = reader.readLine()) != null) {
-        //         output.append(line).append("\n");
-        //     }
-
-        //     int exitCode = process.waitFor();
-        // } catch(IOException | InterruptedException e) {
-        //     result.setError(1);
-        //     result.setMessage(e.getMessage());
+        //     Thread.sleep(1000 * 20);
+        // } catch(InterruptedException e) {
+        //     e.printStackTrace();
         // }
 
-        // Path resourcePath = downloadPath.resolve(outputName).normalize();
-        // result.setResource(new FileSystemResource(resourcePath));
+        DownloadResult result = new DownloadResult();
 
+        String url = request.getUrl();
+        String type = request.getRequestType();
+        int vidQuality = request.getVideoQuality();
+        String audCodec = request.getAudioCodec();
+        int audBitrate = request.getAudioBitrate();
+        String outputName = id;
+
+        if(url.isEmpty()) {
+            result.setStatus("failed");
+            result.setErrorMessage("URL is not provided");
+            return CompletableFuture.completedFuture(result);
+        }
+
+        MediaType t = MediaType.getMediaType(type);
+
+        boolean isVideo = (t == MediaType.VIDEO || t == MediaType.VIDEO_ONLY);
+        boolean isVideoOnly = t == MediaType.VIDEO_ONLY;
+        boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
+
+        vidQuality = resolveVideoQuality(vidQuality);
+        audBitrate = resolveAudioBitrate(audBitrate);
+
+        if(isVideo || isVideoOnly) {
+            outputName += ".mp4";
+        }
+
+        if(audCodec.isEmpty()) {
+            audCodec = "mp3"; // Assume mp3
+        }
+
+        if(isAudioOnly) {
+            outputName += audCodec;
+        }
+
+        List<String> commands = new ArrayList<>();
+        commands.add(executablePath.toString());
+
+        if(isVideo) {
+            commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));
+        } else if(isVideoOnly) {
+            commands.addAll(Arrays.asList("-f", "bv", "-S", String.format("height:%d", vidQuality)));
+        } else if(isAudioOnly) {
+            commands.addAll(Arrays.asList("--audio-format", audCodec, "--audio-quality", "0", "-x"));
+        }
+
+        commands.addAll(Arrays.asList(url, "-P", downloadPath.toString()));
+
+        commands.addAll(Arrays.asList("-o", outputName));
+
+        log.debug("[COMMANDS] " + String.join(" ", commands));
+
+        // return String.join(" ", commands);
+
+        StringBuilder output = new StringBuilder();
+
+        try {
+            ProcessBuilder pb = new ProcessBuilder(commands);
+
+            Process process = pb.start();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+
+            int exitCode = process.waitFor();
+        } catch(IOException | InterruptedException e) {
+            result.setStatus("failed");
+            result.setErrorMessage(e.getMessage());
+        }
+
+        result.setDownloadResourceName(outputName);
+        result.setStatus("success");
         
+        return CompletableFuture.completedFuture(result);
     }
 
     public CompletableFuture<DownloadResult> getProcess(String id) {
         return processes.get(id);
+    }
+
+    public boolean isProcessFinished(String id) {
+        return processes.get(id).isDone();
+    }
+
+    public boolean cancelProcess(String id) {
+        return processes.get(id).cancel(true);
+    }
+
+    public FileSystemResource getResource(String resourceName) throws FileNotFoundException {
+        File resourceFile = downloadPath.resolve(resourceName).normalize().toFile();
+
+        if(!resourceFile.exists()) {
+            throw new FileNotFoundException("Cannot find " + resourceName);
+        }
+
+        return new FileSystemResource(resourceFile);
+    }
+
+    @Async("resourceExecutor")
+    public CompletableFuture<Boolean> removeResourceOn(String resourceName, int duration) {
+        try {
+            Thread.sleep(duration);
+        } catch(InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        Path resourcePath = downloadPath.resolve(resourceName).normalize();
+        try {
+            boolean deleted = Files.deleteIfExists(resourcePath);
+            return CompletableFuture.completedFuture(deleted);
+        } catch(IOException e) {
+            e.printStackTrace();
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     public static void cleanDownloads() {

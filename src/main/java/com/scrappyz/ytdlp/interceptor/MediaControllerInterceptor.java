@@ -20,6 +20,6 @@ public class MediaControllerInterceptor implements HandlerInterceptor {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
         Exception e) throws Exception {
 
-        MediaService.cleanDownloads(); // Clean the download folders after download is completed
+        // MediaService.cleanDownloads(); // Clean the download folders after download is completed
     }
 }

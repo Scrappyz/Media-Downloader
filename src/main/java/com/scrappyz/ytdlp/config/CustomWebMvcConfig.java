@@ -19,7 +19,7 @@ public class CustomWebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new MediaControllerInterceptor())
-                .addPathPatterns("/download");
+                .addPathPatterns("/downloads/get/**");
     }
 
     // For static resources

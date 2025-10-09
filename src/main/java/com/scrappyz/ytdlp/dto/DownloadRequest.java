@@ -11,6 +11,5 @@ public class DownloadRequest {
     private int videoQuality;
     private String audioCodec = "";
     private int audioBitrate;
-    private String outputName = "";
 
 }
