@@ -25,9 +25,9 @@ public class CustomWebMvcConfig implements WebMvcConfigurer {
     // For static resources
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        Path path = Paths.get(System.getProperty("user.dir")).resolve("public").normalize();
+        Path path = Paths.get(System.getProperty("user.dir")).resolve("storage/public").normalize();
 
-        registry.addResourceHandler("/public/**") // Prefix; Becomes `{context-path}/resources/downloads/**` to access the `temp` folder
+        registry.addResourceHandler("/public/**") // Prefix; Becomes `{context-path}/public/**` to access the `temp` folder
                 .addResourceLocations("file:" + path.toString() + "/") // `file:` means that the directory is within the filesystem
                 .setCacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic())
                 .resourceChain(true)

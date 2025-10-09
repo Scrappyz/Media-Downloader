@@ -29,8 +29,8 @@ public class MediaService {
 
     private static final Logger log = LoggerFactory.getLogger(MediaService.class);
     
-    public static final Path executablePath = Paths.get("./bin/yt-dlp.exe").toAbsolutePath().normalize();
-    public static final Path downloadPath = Paths.get("./public/downloads").toAbsolutePath().normalize();
+    public static final Path executablePath = Paths.get(System.getProperty("user.dir")).resolve("bin/yt-dlp.exe").toAbsolutePath().normalize();
+    public static final Path downloadPath = Paths.get(System.getProperty("user.dir")).resolve("storage/private/downloads").toAbsolutePath().normalize();
 
     // BAD: Gets modified everytime `download` gets called
     // private List<String> commands = new ArrayList<>(Arrays.asList(executablePath.toString()));

@@ -5,6 +5,7 @@ import lombok.Setter;
 
 @Getter @Setter
 public class DownloadResponse {
-    private int error;
-    private String errorMessage;
+
+    private String requestId;
+    
 }

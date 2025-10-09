@@ -16,6 +16,8 @@ import com.scrappyz.ytdlp.service.MediaService;
 
 import lombok.RequiredArgsConstructor;
 
+import com.github.f4b6a3.ulid.UlidCreator;
+
 @RestController
 @RequiredArgsConstructor
 public class MediaController {
@@ -25,7 +27,7 @@ public class MediaController {
     
     @GetMapping("/print")
     public ResponseEntity<String> print(@Value("${server.servlet.context-path}") String temp) {
-        temp = System.getProperty("user.dir");
+        temp = UlidCreator.getMonotonicUlid().toString();
         return ResponseEntity.ok().body(temp);
     }
 
