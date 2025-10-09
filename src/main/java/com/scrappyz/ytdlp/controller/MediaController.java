@@ -1,5 +1,7 @@
 package com.scrappyz.ytdlp.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,11 +20,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class MediaController {
 
+    @Autowired
     private final MediaService mediaService;
     
     @GetMapping("/print")
-    public ResponseEntity<String> print() {
-        return ResponseEntity.ok().body(MediaService.executablePath.toString());
+    public ResponseEntity<String> print(@Value("${server.servlet.context-path}") String temp) {
+        temp = System.getProperty("user.dir");
+        return ResponseEntity.ok().body(temp);
     }
 
     @GetMapping("/download")
