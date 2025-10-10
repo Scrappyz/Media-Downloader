@@ -1,11 +1,10 @@
 package com.scrappyz.ytdlp.controller;
 
 import java.io.FileNotFoundException;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,8 +13,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResourceErrorResponse;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
@@ -24,25 +25,20 @@ import com.scrappyz.ytdlp.service.MediaService;
 
 import lombok.RequiredArgsConstructor;
 
-import com.github.f4b6a3.ulid.UlidCreator;
-
-import com.scrappyz.ytdlp.utils.ThreadUtils;
-
-import org.springframework.web.bind.annotation.RequestParam;
-
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/download")
 public class MediaController {
 
-    @Autowired
+    private final Logger log = LoggerFactory.getLogger(MediaController.class);
+
     private final MediaService mediaService;
+    private final PathProperties paths;
     
-    @GetMapping("/print")
-    public ResponseEntity<String> print(@Value("${server.servlet.context-path}") String temp) {
-        temp = UlidCreator.getMonotonicUlid().toString();
-        return ResponseEntity.ok().body(temp);
+    @GetMapping("/hello")
+    public ResponseEntity<String> hello() {
+        // log.info(paths.getExecutablePath().toString());
+        return ResponseEntity.ok().body(paths.getDownloadPath().toString());
     }
 
     @GetMapping

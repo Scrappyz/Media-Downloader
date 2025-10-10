@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -19,39 +18,33 @@ import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import com.github.f4b6a3.ulid.UlidCreator;
+import com.scrappyz.ytdlp.config.PathProperties;
+import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.model.DownloadResult;
 
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.springframework.context.annotation.Lazy;
-
-import com.github.f4b6a3.ulid.Ulid;
-import com.github.f4b6a3.ulid.UlidCreator;
-
-import com.scrappyz.ytdlp.dto.DownloadRequest;
-import com.scrappyz.ytdlp.utils.ThreadUtils;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class MediaService {
 
     private static final Logger log = LoggerFactory.getLogger(MediaService.class);
 
+    private final PathProperties paths;
+
     @Lazy
     @Autowired
     private MediaService async; // Allow us to execute the asynch method
-    
-    public static final Path executablePath = Paths.get(System.getProperty("user.dir")).resolve("bin/yt-dlp.exe").toAbsolutePath().normalize();
-    public static final Path downloadPath = Paths.get(System.getProperty("user.dir")).resolve("storage/private/downloads").toAbsolutePath().normalize();
-
-    // BAD: Gets modified everytime `download` gets called
-    // private List<String> commands = new ArrayList<>(Arrays.asList(executablePath.toString()));
  
     private static final SortedSet<Integer> videoQuality = new TreeSet<>(
         Arrays.asList(144, 240, 360, 480, 720, 1080, 2140) // height in pixels (p)
@@ -210,7 +203,7 @@ public class MediaService {
         }
 
         List<String> commands = new ArrayList<>();
-        commands.add(executablePath.toString());
+        commands.add(paths.getExecutablePath().resolve("youtube/yt-dlp.exe").toString());
 
         if(isVideo) {
             commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));
@@ -220,7 +213,7 @@ public class MediaService {
             commands.addAll(Arrays.asList("--audio-format", audCodec, "--audio-quality", "0", "-x"));
         }
 
-        commands.addAll(Arrays.asList(url, "-P", downloadPath.toString()));
+        commands.addAll(Arrays.asList(url, "-P", paths.getDownloadPath().toString()));
 
         commands.addAll(Arrays.asList("-o", outputName));
 
@@ -274,7 +267,7 @@ public class MediaService {
     }
 
     public FileSystemResource getResource(String resourceName) throws FileNotFoundException {
-        File resourceFile = downloadPath.resolve(resourceName).normalize().toFile();
+        File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
 
         if(!resourceFile.exists()) {
             throw new FileNotFoundException("Cannot find " + resourceName);
@@ -291,7 +284,7 @@ public class MediaService {
             e.printStackTrace();
         }
 
-        Path resourcePath = downloadPath.resolve(resourceName).normalize();
+        Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
         try {
             boolean deleted = Files.deleteIfExists(resourcePath);
             return CompletableFuture.completedFuture(deleted);
