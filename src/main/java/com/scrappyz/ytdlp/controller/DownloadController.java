@@ -34,7 +34,7 @@ public class DownloadController {
 
     private final Logger log = LoggerFactory.getLogger(DownloadController.class);
 
-    private final DownloadService mediaService;
+    private final DownloadService downloadService;
     private final PathProperties paths;
     
     @GetMapping("/hello")
@@ -45,23 +45,25 @@ public class DownloadController {
 
     @PostMapping
     public ResponseEntity<DownloadResponse> download(@RequestBody DownloadRequest request) {
-        String id = mediaService.enqueue(request);
-        DownloadResponse response = new DownloadResponse();
-        response.setRequestId(id);
+        DownloadResponse response = downloadService.enqueue(request);
+
+        if(DownloadService.ErrorCode.DENIED.getString().equals(response.getError())) {
+            return ResponseEntity.internalServerError().body(response);
+        }
 
         return ResponseEntity.ok().body(response);
     }
 
-    @GetMapping("/{requestId}") // Fix
+    @GetMapping("/{requestId}")
     public ResponseEntity<DownloadResult> checkRequest(@PathVariable String requestId) {
-        CompletableFuture<DownloadResult> future = mediaService.getProcess(requestId);
+        CompletableFuture<DownloadResult> future = downloadService.getProcess(requestId);
         DownloadResult result = new DownloadResult();
 
         result.setStatus("pending");
 
         if(future.isDone()) {
             result = future.getNow(result);
-            mediaService.cancelProcess(requestId);
+            downloadService.cancelProcess(requestId);
         }
 
         if(result.getStatus().equals("failed")) {
@@ -72,7 +74,7 @@ public class DownloadController {
         return ResponseEntity.ok().body(result);
     }
 
-    @GetMapping("/{requestId}/file") // Fix
+    @GetMapping("/{requestId}/file")
     public ResponseEntity<Object> getResource(@PathVariable String requestId,
         @RequestParam(name = "output", required = false, defaultValue = "") String outputName) {
 
@@ -80,7 +82,7 @@ public class DownloadController {
         FileSystemResource resource;
 
         try {
-            resource = mediaService.getResource(requestId);
+            resource = downloadService.getResource(requestId);
         } catch(FileNotFoundException e) {
             DownloadResourceErrorResponse response = new DownloadResourceErrorResponse();
             response.setMessage(e.getMessage());
