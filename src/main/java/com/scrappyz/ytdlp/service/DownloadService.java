@@ -30,21 +30,21 @@ import org.springframework.stereotype.Service;
 import com.github.f4b6a3.ulid.UlidCreator;
 import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
-import com.scrappyz.ytdlp.model.DownloadResult;
+import com.scrappyz.ytdlp.dto.DownloadResult;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class MediaService {
+public class DownloadService {
 
-    private static final Logger log = LoggerFactory.getLogger(MediaService.class);
+    private static final Logger log = LoggerFactory.getLogger(DownloadService.class);
 
     private final PathProperties paths;
 
     @Lazy
     @Autowired
-    private MediaService async; // Allow us to execute the asynch method
+    private DownloadService async; // Allow us to execute the asynch method
  
     private static final SortedSet<Integer> videoQuality = new TreeSet<>(
         Arrays.asList(144, 240, 360, 480, 720, 1080, 2140) // height in pixels (p)
@@ -59,6 +59,8 @@ public class MediaService {
     );
 
     private final ConcurrentHashMap<String, CompletableFuture<DownloadResult>> processes = new ConcurrentHashMap<>();
+
+    private final ConcurrentHashMap<String, String> resourceMap = new ConcurrentHashMap<>();
 
     @Value("${resource.expiry.time:120000}")
     private long resourceExpiryTime;
@@ -157,12 +159,9 @@ public class MediaService {
     }
 
     // Methods:
-    // Video + Audio
-    // Video Only
-    // Audio Only
     // For video + audio: yt-dlp -f best -S height:720 https://youtu.be/0LV7y_HnQr4?si=dmTkA17cgIxIy_Us
     // For video only: yt-dlp -f bv -S height:720 https://youtu.be/0LV7y_HnQr4?si=dmTkA17cgIxIy_Us
-    // For audio only: yt-dlp --audio-format mp3 --audio-quality 0 -x url
+    // For audio only: yt-dlp --audio-format m4a --audio-quality 0 -x url
     @Async("downloadExecutor")
     public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) {
 
@@ -177,7 +176,7 @@ public class MediaService {
 
         if(url.isEmpty()) {
             result.setStatus("failed");
-            result.setErrorMessage("URL is not provided");
+            result.setMessage("URL is not provided");
             return CompletableFuture.completedFuture(result);
         }
 
@@ -195,7 +194,7 @@ public class MediaService {
         }
 
         if(audCodec.isEmpty()) {
-            audCodec = "mp3"; // Assume mp3
+            audCodec = ".m4a"; // Assume mp3
         }
 
         if(isAudioOnly) {
@@ -239,11 +238,13 @@ public class MediaService {
             int exitCode = process.waitFor();
         } catch(IOException | InterruptedException e) {
             result.setStatus("failed");
-            result.setErrorMessage(e.getMessage());
+            result.setMessage(e.getMessage());
+            return CompletableFuture.completedFuture(result);
         }
 
-        result.setDownloadResourceName(outputName);
         result.setStatus("success");
+        result.setMessage("Download has finished");
+        resourceMap.put(id, outputName);
 
         async.expireResource(outputName); // Remove in set time (ms)
 
@@ -256,6 +257,20 @@ public class MediaService {
         return processes.get(id);
     }
 
+    public String getProcessStatus(String id) {
+        if(!processes.contains(id)) {
+            return "invalid";
+        }
+
+        CompletableFuture<DownloadResult> future = processes.get(id);
+
+        if(!future.isDone()) {
+            return "pending";
+        }
+
+        return future.getNow(new DownloadResult()).getStatus();
+    }
+
     public boolean isProcessFinished(String id) {
         return processes.get(id).isDone();
     }
@@ -266,14 +281,24 @@ public class MediaService {
         return b;
     }
 
-    public FileSystemResource getResource(String resourceName) throws FileNotFoundException {
+    public FileSystemResource getResource(String id, boolean removeInResourceMap) throws FileNotFoundException {
+        String resourceName = resourceMap.get(id);
         File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
 
         if(!resourceFile.exists()) {
+
             throw new FileNotFoundException("Cannot find " + resourceName);
         }
 
+        if(removeInResourceMap) {
+            resourceMap.remove(id);
+        }
+
         return new FileSystemResource(resourceFile);
+    }
+
+    public FileSystemResource getResource(String id) throws FileNotFoundException {
+        return getResource(id, true);
     }
 
     @Async("resourceExecutor")

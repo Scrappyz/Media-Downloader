@@ -11,7 +11,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration
 @EnableAsync
-public class DownloadAsyncConfig {
+public class AsyncDownloadConfig {
     
     @Bean(name = "downloadExecutor")
     public ThreadPoolTaskExecutor downloadsExecutor(

@@ -11,14 +11,14 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
-import com.scrappyz.ytdlp.interceptor.MediaControllerInterceptor;
+import com.scrappyz.ytdlp.interceptor.DownloadControllerInterceptor;
 
 @Configuration
 public class CustomWebMvcConfig implements WebMvcConfigurer {
     
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new MediaControllerInterceptor())
+        registry.addInterceptor(new DownloadControllerInterceptor())
                 .addPathPatterns("/downloads/get/**");
     }
 

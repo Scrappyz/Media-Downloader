@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,19 +21,20 @@ import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResourceErrorResponse;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
-import com.scrappyz.ytdlp.model.DownloadResult;
-import com.scrappyz.ytdlp.service.MediaService;
+import com.scrappyz.ytdlp.dto.DownloadResult;
+import com.scrappyz.ytdlp.service.DownloadService;
 
 import lombok.RequiredArgsConstructor;
 
+
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/download")
-public class MediaController {
+@RequestMapping("/downloads")
+public class DownloadController {
 
-    private final Logger log = LoggerFactory.getLogger(MediaController.class);
+    private final Logger log = LoggerFactory.getLogger(DownloadController.class);
 
-    private final MediaService mediaService;
+    private final DownloadService mediaService;
     private final PathProperties paths;
     
     @GetMapping("/hello")
@@ -41,7 +43,7 @@ public class MediaController {
         return ResponseEntity.ok().body(paths.getDownloadPath().toString());
     }
 
-    @GetMapping
+    @PostMapping
     public ResponseEntity<DownloadResponse> download(@RequestBody DownloadRequest request) {
         String id = mediaService.enqueue(request);
         DownloadResponse response = new DownloadResponse();
@@ -50,16 +52,16 @@ public class MediaController {
         return ResponseEntity.ok().body(response);
     }
 
-    @GetMapping("/check/{processId}")
-    public ResponseEntity<DownloadResult> checkRequest(@PathVariable String processId) {
-        CompletableFuture<DownloadResult> future = mediaService.getProcess(processId);
+    @GetMapping("/{requestId}") // Fix
+    public ResponseEntity<DownloadResult> checkRequest(@PathVariable String requestId) {
+        CompletableFuture<DownloadResult> future = mediaService.getProcess(requestId);
         DownloadResult result = new DownloadResult();
 
         result.setStatus("pending");
 
         if(future.isDone()) {
             result = future.getNow(result);
-            mediaService.cancelProcess(processId);
+            mediaService.cancelProcess(requestId);
         }
 
         if(result.getStatus().equals("failed")) {
@@ -70,29 +72,30 @@ public class MediaController {
         return ResponseEntity.ok().body(result);
     }
 
-    @GetMapping("/get/{resourceName}")
-    public ResponseEntity<Object> getResource(@PathVariable String resourceName,
+    @GetMapping("/{requestId}/file") // Fix
+    public ResponseEntity<Object> getResource(@PathVariable String requestId,
         @RequestParam(name = "output", required = false, defaultValue = "") String outputName) {
 
         HttpHeaders headers = new HttpHeaders();
         FileSystemResource resource;
 
         try {
-            resource = mediaService.getResource(resourceName);
+            resource = mediaService.getResource(requestId);
         } catch(FileNotFoundException e) {
             DownloadResourceErrorResponse response = new DownloadResourceErrorResponse();
-            response.setErrorMessage(e.getMessage());
+            response.setMessage(e.getMessage());
 
             return ResponseEntity.badRequest()
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(response);
         }
 
-        int extensionIndex = resourceName.lastIndexOf('.');
-        String extension = resourceName.substring(extensionIndex);
+        String filename = resource.getFilename();
+        int extensionIndex = filename.lastIndexOf('.');
+        String extension = filename.substring(extensionIndex);
 
         if(outputName.isEmpty()) {
-            outputName = resourceName;
+            outputName = requestId;
         }
 
         outputName += extension;

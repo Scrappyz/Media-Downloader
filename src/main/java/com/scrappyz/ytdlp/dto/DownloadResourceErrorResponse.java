@@ -6,6 +6,6 @@ import lombok.Setter;
 @Getter @Setter
 public class DownloadResourceErrorResponse {
     
-    private String errorMessage;
+    private String message;
     
 }
