@@ -33,6 +33,9 @@ import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.dto.DownloadResult;
+import com.scrappyz.ytdlp.exception.custom.FullDownloadQueueException;
+import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
+import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -214,13 +217,9 @@ public class DownloadService {
             f = async.download(id, request); // Run in the background
         } catch(RejectedExecutionException e) {
             log.info("[ERROR] Rejected Execution due to full queue");
-            result.setError(ErrorCode.DENIED.getString());
-            result.setMessage("Queue is full");
-            result.setRequestId(null);
-            return result;
+            throw new FullDownloadQueueException("Download queue is full");
         }
 
-        result.setMessage("Your response has been queued successfully");
         result.setRequestId(id);
 
         processes.put(id, f);
@@ -245,8 +244,8 @@ public class DownloadService {
         String outputName = id;
 
         if(url.isEmpty()) {
-            result.setStatus(RequestStatus.FAILED.getString());
-            result.setMessage("URL is not provided");
+            result.setStatus("failed");
+            result.setMessage("URL is empty");
             return CompletableFuture.completedFuture(result);
         }
 
@@ -307,8 +306,8 @@ public class DownloadService {
 
             int exitCode = process.waitFor();
         } catch(IOException | InterruptedException e) {
-            result.setStatus(RequestStatus.FAILED.getString());
-            result.setMessage(e.getMessage());
+            result.setStatus("failed");
+            result.setMessage("Something went wrong");
             return CompletableFuture.completedFuture(result);
         }
 
@@ -317,19 +316,21 @@ public class DownloadService {
         resourceMap.put(id, outputName);
 
         async.expireResource(outputName); // Remove in set time (ms)
-
-        // processes.remove(id); // Remove from processes once finished
         
         return CompletableFuture.completedFuture(result);
     }
 
-    public CompletableFuture<DownloadResult> getProcess(String id) {
+    public CompletableFuture<DownloadResult> getProcess(String id) throws InvalidProcessException {
+        if(!processes.containsKey(id)) {
+            throw new InvalidProcessException("Process with request ID " + id + " could not be found");
+        }
+
         return processes.get(id);
     }
 
-    public String getProcessStatus(String id) {
-        if(!processes.contains(id)) {
-            return RequestStatus.INVALID.getString();
+    public String getProcessStatus(String id) throws InvalidProcessException {
+        if(!processes.containsKey(id)) {
+            throw new InvalidProcessException("Process with request ID " + id + " could not be found");
         }
 
         CompletableFuture<DownloadResult> future = processes.get(id);
@@ -341,8 +342,16 @@ public class DownloadService {
         return future.getNow(new DownloadResult()).getStatus();
     }
 
-    public boolean isProcessFinished(String id) {
+    public boolean isProcessFinished(String id) throws InvalidProcessException {
+        if(!processes.containsKey(id)) {
+            throw new InvalidProcessException("Process with request ID " + id + " could not be found");
+        }
+
         return processes.get(id).isDone();
+    }
+
+    public boolean isProcessExist(String id) {
+        return processes.containsKey(id);
     }
 
     public boolean cancelProcess(String id) {
@@ -351,13 +360,12 @@ public class DownloadService {
         return b;
     }
 
-    public FileSystemResource getResource(String id, boolean removeInResourceMap) throws FileNotFoundException {
+    public FileSystemResource getResource(String id, boolean removeInResourceMap) throws ResourceNotFoundException {
         String resourceName = resourceMap.get(id);
         File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
 
         if(!resourceFile.exists()) {
-
-            throw new FileNotFoundException("Cannot find " + resourceName);
+            throw new ResourceNotFoundException("Cannot find " + resourceName);
         }
 
         if(removeInResourceMap) {
@@ -367,7 +375,7 @@ public class DownloadService {
         return new FileSystemResource(resourceFile);
     }
 
-    public FileSystemResource getResource(String id) throws FileNotFoundException {
+    public FileSystemResource getResource(String id) throws ResourceNotFoundException {
         return getResource(id, true);
     }
 
@@ -382,6 +390,7 @@ public class DownloadService {
         Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
         try {
             boolean deleted = Files.deleteIfExists(resourcePath);
+            log.info("Resource \"" + resourceName + "\" expired");
             return CompletableFuture.completedFuture(deleted);
         } catch(IOException e) {
             e.printStackTrace();
