@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group } from '@mantine/core';
+import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title } from '@mantine/core';
 
 import { api } from './globals';
 import { useForm } from '@mantine/form';
@@ -16,17 +16,23 @@ function App() {
   //   }
   // }
 
-  const mediaTypes = ["Video", "Video Only", "Audio Only"];
-  const videoQualities = ["144p", "240p", "360p", "480p", "720p", "1080p", "2160p"];
+  const mediaTypes: string[] = ["Video", "Video Only", "Audio Only"];
+  const videoQualities: string[] = ["144p", "240p", "360p", "480p", "720p", "1080p", "2160p"];
+  const audioCodecs: string[] = ["mp3", "m4a", "wav", "flac"];
 
+  const [mediaType, setMediaType] = useState(mediaTypes[0]);
   const [url, setUrl] = useState("");
+
+  const isVideo: boolean = (mediaType === "Video" || mediaType === "Video Only");
+  const isAudio: boolean = mediaType === "Audio Only";
 
   const form = useForm({
     mode: 'uncontrolled',
     initialValues: {
       type: "Video",
       url: "",
-      videoQuality: "480p"
+      videoQuality: "480p",
+      audioCodec: "m4a"
     }
   });
 
@@ -39,6 +45,12 @@ function App() {
     }
   }
 
+  const handleTypeChange = (e) => {
+    const val = e.target.value;
+    form.setFieldValue("type", val);
+    setMediaType(val);
+  }
+
   const handlePaste = () => {
     getClipboardText().then(res => {
       console.log("Clipboard:", res);
@@ -49,18 +61,26 @@ function App() {
 
   return (
     <MantineProvider defaultColorScheme="dark">
-      <Flex pl="10%" pr="10%" h="100vh" direction="row" justify="center" align="center">
+      <Flex pl="10%" pr="10%" h="100vh" direction="column" justify="center" align="center" gap="lg">
+        <Title order={2}>Youtube Downloader</Title>
         <form onSubmit={form.onSubmit((values) => console.log(values))}>
           <Flex direction="column" rowGap="lg">
-            <NativeSelect key={form.key("type")} data={mediaTypes} />
+            <NativeSelect label='Type' withAsterisk key={form.key("type")} value={mediaType} data={mediaTypes} onChange={handleTypeChange} />
             <Group gap="0">
-              <TextInput key={form.key("url")} value={url} placeholder='Enter video link here' radius="0" onChange={(e) => setUrl(e.target.value)} />
-              <Button onClick={handlePaste} radius="0">Paste</Button>
+              <TextInput label='URL' withAsterisk key={form.key("url")} value={url} placeholder='Enter video link here' radius="0" onChange={(e) => setUrl(e.target.value)} />
+              <Button mt='25px' onClick={handlePaste} radius="0">Paste</Button>
             </Group>
-            <NativeSelect key={form.key("videoQuality")} data={videoQualities} />
+            {
+              isVideo ? (
+                <NativeSelect label='Video Quality' withAsterisk key={form.key("videoQuality")} data={videoQualities} />
+              ) : (
+                <NativeSelect label='Audio Codec' withAsterisk key={form.key("audioCodec")} data={audioCodecs} />
+              )
+            }
+            <Button type='submit'>Submit</Button>
           </Flex>
         </form>
-        <Button onClick={() => console.log(form.getValues())}>Display Values</Button>
+        {/* <Button onClick={() => console.log(form.getValues())}>Display Values</Button> */}
       </Flex>
     </MantineProvider>
   );
