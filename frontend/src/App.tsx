@@ -1,16 +1,23 @@
-import '@mantine/core/styles.css';
-import { MantineProvider } from '@mantine/core';
+import React from 'react';
+import { MantineProvider, Button } from '@mantine/core';
 
-import { Button } from '@mantine/core'
-import './App.css'
+import { api } from './globals';
 
 function App() {
+  const getData = async(): Promise<any> => {
+    try {
+      const result = await fetch(api + "/downloads/HJGEOGH");
+      console.log(await result.json());
+    } catch(error) {
+      console.log(error);
+    }
+  }
 
   return (
-    <MantineProvider>
-      <Button variant="filled">Button</Button>
+    <MantineProvider theme={{ colorScheme: 'dark' }}>
+      <Button onClick={() => getData()}>Panag</Button>
     </MantineProvider>
-  )
+  );
 }
 
-export default App
+export default App;

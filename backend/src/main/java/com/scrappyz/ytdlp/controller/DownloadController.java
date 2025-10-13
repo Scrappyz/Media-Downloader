@@ -42,7 +42,7 @@ public class DownloadController {
         // log.info(paths.getExecutablePath().toString());
         return ResponseEntity.ok().body(paths.getDownloadPath().toString());
     }
-
+    
     @PostMapping
     public ResponseEntity<DownloadResponse> download(@RequestBody DownloadRequest request) {
         DownloadResponse response = downloadService.enqueue(request);
