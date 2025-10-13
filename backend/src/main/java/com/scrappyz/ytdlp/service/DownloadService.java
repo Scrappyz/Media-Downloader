@@ -307,21 +307,50 @@ public class DownloadService {
         // return String.join(" ", commands);
 
         List<String> output = new ArrayList<>();
+        List<String> errorOutput = new ArrayList<>();
 
         try {
             ProcessBuilder pb = new ProcessBuilder(commands);
 
             Process process = pb.start();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+            // BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
-            String line;
+            // String line;
 
-            while ((line = reader.readLine()) != null) {
-                output.add(line);
-            }
+            Thread outputStreamConsumer = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        output.add(line); // Or handle the output line as needed
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            outputStreamConsumer.start();
+
+            Thread errorStreamConsumer = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        errorOutput.add(line); // Or handle the error line as needed
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+
+            errorStreamConsumer.start();
+
+            // while ((line = reader.readLine()) != null) {
+            //     output.add(line);
+            // }
 
             int exitCode = process.waitFor();
+
+            outputStreamConsumer.join();
+            errorStreamConsumer.join();
         } catch(IOException | InterruptedException e) {
             result.setStatus("failed");
             result.setMessage("Something went wrong");
@@ -329,17 +358,21 @@ public class DownloadService {
         }
 
         ErrorCode error = null;
+        log.info(output.get(output.size() - 1));
+        log.info(errorOutput.get(errorOutput.size() - 1));
 
-        if(!output.isEmpty()) {
-            error = parseError(output.get(output.size() - 1));
+        if(!errorOutput.isEmpty()) {
+            error = parseError(errorOutput.get(errorOutput.size() - 1));
         }
 
         if(error == ErrorCode.INVALID_URL) {
-            throw new InvalidUrlException("The URL " + url + " is invalid");
+            log.info("Invalid URL");
+            throw new InvalidUrlException("The URL '" + url + "' is invalid");
         }
 
         if(error == ErrorCode.UNSUPPORTED_URL) {
-            throw new UnsupportedUrlException("The URL " + url + " is unsupported");
+            log.info("Unsupported URL");
+            throw new UnsupportedUrlException("The URL '" + url + "'' is unsupported");
         }
 
         result.setStatus(RequestStatus.SUCCESS.getString());
@@ -402,7 +435,7 @@ public class DownloadService {
         File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
 
         if(cancelled.contains(id) || !resourceFile.exists()) {
-            throw new ResourceNotFoundException("Could not find resource \"" + resourceName + "\"");
+            throw new ResourceNotFoundException("Could not find resource '" + resourceName + "'");
         }
 
         if(removeInResourceMap) {
