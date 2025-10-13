@@ -9,7 +9,9 @@ import com.scrappyz.ytdlp.exception.custom.ApiException;
 import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.exception.custom.FullDownloadQueueException;
 import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
+import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
+import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -40,6 +42,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidProcessException.class)
     public ResponseEntity<ApiError> handleDownloadFail(InvalidProcessException e) {
+        ApiError error = new ApiError(e.getCode(), e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(UnsupportedUrlException.class)
+    public ResponseEntity<ApiError> handleDownloadFail(UnsupportedUrlException e) {
+        ApiError error = new ApiError(e.getCode(), e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(InvalidUrlException.class)
+    public ResponseEntity<ApiError> handleDownloadFail(InvalidUrlException e) {
         ApiError error = new ApiError(e.getCode(), e.getMessage());
         return ResponseEntity.badRequest().body(error);
     }

@@ -35,7 +35,9 @@ import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.dto.DownloadResult;
 import com.scrappyz.ytdlp.exception.custom.FullDownloadQueueException;
 import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
+import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
+import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -129,7 +131,8 @@ public class DownloadService {
     };
 
     public enum ErrorCode {
-        DENIED("denied");
+        UNSUPPORTED_URL("unsupported_url"),
+        INVALID_URL("invalid_url");
 
         private final String string;
         private static final HashMap<String, ErrorCode> byString = new HashMap<>();
@@ -206,6 +209,18 @@ public class DownloadService {
         }
 
         return audBitrate;
+    }
+
+    private ErrorCode parseError(String error) {
+        if(error.contains("Unsupported URL")) {
+            return ErrorCode.UNSUPPORTED_URL;
+        }
+
+        if(error.contains("not a valid URL")) {
+            return ErrorCode.INVALID_URL;
+        }
+
+        return null;
     }
     // ---HELPER METHODS---
 
@@ -291,19 +306,19 @@ public class DownloadService {
 
         // return String.join(" ", commands);
 
-        StringBuilder output = new StringBuilder();
+        List<String> output = new ArrayList<>();
 
         try {
             ProcessBuilder pb = new ProcessBuilder(commands);
 
             Process process = pb.start();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
             String line;
 
             while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
+                output.add(line);
             }
 
             int exitCode = process.waitFor();
@@ -311,6 +326,20 @@ public class DownloadService {
             result.setStatus("failed");
             result.setMessage("Something went wrong");
             return CompletableFuture.completedFuture(result);
+        }
+
+        ErrorCode error = null;
+
+        if(!output.isEmpty()) {
+            error = parseError(output.get(output.size() - 1));
+        }
+
+        if(error == ErrorCode.INVALID_URL) {
+            throw new InvalidUrlException("The URL " + url + " is invalid");
+        }
+
+        if(error == ErrorCode.UNSUPPORTED_URL) {
+            throw new UnsupportedUrlException("The URL " + url + " is unsupported");
         }
 
         result.setStatus(RequestStatus.SUCCESS.getString());
@@ -364,6 +393,11 @@ public class DownloadService {
     }
 
     public FileSystemResource getResource(String id, boolean removeInResourceMap) throws ResourceNotFoundException {
+
+        if(!resourceMap.contains(id)) {
+            throw new ResourceNotFoundException("Could not find resource with ID of " + id);
+        }
+
         String resourceName = resourceMap.get(id);
         File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
 
