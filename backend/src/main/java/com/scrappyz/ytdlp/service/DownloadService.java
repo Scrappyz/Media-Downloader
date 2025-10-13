@@ -2,7 +2,6 @@ package com.scrappyz.ytdlp.service;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
@@ -13,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
@@ -64,6 +64,8 @@ public class DownloadService {
     );
 
     private final ConcurrentHashMap<String, CompletableFuture<DownloadResult>> processes = new ConcurrentHashMap<>();
+
+    private final Set<String> cancelled = new ConcurrentHashMap<>().newKeySet();
 
     private final ConcurrentHashMap<String, String> resourceMap = new ConcurrentHashMap<>();
 
@@ -357,6 +359,7 @@ public class DownloadService {
     public boolean cancelProcess(String id) {
         boolean b = processes.get(id).cancel(true);
         processes.remove(id);
+        cancelled.add(id);
         return b;
     }
 
@@ -364,8 +367,8 @@ public class DownloadService {
         String resourceName = resourceMap.get(id);
         File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
 
-        if(!resourceFile.exists()) {
-            throw new ResourceNotFoundException("Cannot find " + resourceName);
+        if(cancelled.contains(id) || !resourceFile.exists()) {
+            throw new ResourceNotFoundException("Could not find resource \"" + resourceName + "\"");
         }
 
         if(removeInResourceMap) {
@@ -379,6 +382,22 @@ public class DownloadService {
         return getResource(id, true);
     }
 
+    public boolean removeResource(String id) {
+        String resourceName = resourceMap.get(id);
+        Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
+        boolean deleted;
+
+        try {
+            deleted = Files.deleteIfExists(resourcePath);
+        } catch(IOException e) {
+            return false;
+        }
+
+        resourceMap.remove(id);
+
+        return deleted;
+    }
+
     @Async("resourceExecutor")
     public CompletableFuture<Boolean> expireResource(String resourceName) { // Delete downloaded resource after a certain time
         try {
@@ -388,6 +407,15 @@ public class DownloadService {
         }
 
         Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
+
+        int extensionIndex = resourceName.lastIndexOf('.');
+        String id = resourceName.substring(0, extensionIndex);
+
+        if(cancelled.contains(id)) {
+            log.info("Cancelled download ID \"" + id + "\" expired");
+            cancelled.remove(id);
+        }
+
         try {
             boolean deleted = Files.deleteIfExists(resourcePath);
             log.info("Resource \"" + resourceName + "\" expired");
