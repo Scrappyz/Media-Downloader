@@ -272,7 +272,7 @@ public class DownloadService {
         }
 
         List<String> commands = new ArrayList<>();
-        commands.add(paths.getExecutablePath().resolve("youtube/yt-dlp.exe").toString());
+        commands.add(paths.getYtdlpBin().toString());
 
         if(isVideo) {
             commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));

@@ -13,7 +13,8 @@ import lombok.Setter;
 @Getter @Setter
 public class PathProperties {
     
-    private Path executablePath;
+    private Path binPath;
+    private Path ytdlpBin;
     private Path downloadPath;
     
 }
