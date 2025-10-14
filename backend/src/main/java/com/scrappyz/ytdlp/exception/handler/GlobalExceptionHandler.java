@@ -12,6 +12,7 @@ import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
 import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
+import com.scrappyz.ytdlp.exception.custom.FormatUnavailableException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -54,6 +55,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidUrlException.class)
     public ResponseEntity<ApiError> handleDownloadFail(InvalidUrlException e) {
+        ApiError error = new ApiError(e.getCode(), e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(FormatUnavailableException.class)
+    public ResponseEntity<ApiError> handleDownloadFail(FormatUnavailableException e) {
         ApiError error = new ApiError(e.getCode(), e.getMessage());
         return ResponseEntity.badRequest().body(error);
     }

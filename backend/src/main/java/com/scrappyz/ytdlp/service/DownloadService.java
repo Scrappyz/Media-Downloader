@@ -133,7 +133,8 @@ public class DownloadService {
 
     public enum ErrorCode {
         UNSUPPORTED_URL("unsupported_url"),
-        INVALID_URL("invalid_url");
+        INVALID_URL("invalid_url"),
+        FORMAT_UNAVAILABLE("format_unavailable");
 
         private final String string;
         private static final HashMap<String, ErrorCode> byString = new HashMap<>();
@@ -246,6 +247,10 @@ public class DownloadService {
             return ErrorCode.INVALID_URL;
         }
 
+        if(error.contains("Requested format is not available")) {
+            return ErrorCode.FORMAT_UNAVAILABLE;
+        }
+
         return null;
     }
 
@@ -286,9 +291,9 @@ public class DownloadService {
     }
 
     // Methods:
-    // For video + audio: yt-dlp -f best -S height:720 https://youtu.be/0LV7y_HnQr4?si=dmTkA17cgIxIy_Us
-    // For video only: yt-dlp -f bv -S height:720 https://youtu.be/0LV7y_HnQr4?si=dmTkA17cgIxIy_Us
-    // For audio only: yt-dlp --audio-format m4a --audio-quality 0 -x url
+    // For video + audio: yt-dlp -f best[ext=mp4][height<=720] https://youtu.be/rQQ09hP-xHI?si=9iL71nxDMiXFP3LG
+    // For video only: yt-dlp -f bestvideo[ext=mp4][height<=720] https://youtu.be/rQQ09hP-xHI?si=9iL71nxDMiXFP3LG
+    // For audio only: yt-dlp -f bestaudio[ext=m4a] https://youtu.be/rQQ09hP-xHI?si=9iL71nxDMiXFP3LG
     @Async("downloadExecutor")
     public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) {
 
@@ -297,8 +302,6 @@ public class DownloadService {
         String url = request.getUrl();
         String type = request.getRequestType();
         int vidQuality = request.getVideoQuality();
-        String audCodec = request.getAudioCodec();
-        int audBitrate = request.getAudioBitrate();
         String outputName = id;
 
         if(url.isEmpty()) {
@@ -318,18 +321,14 @@ public class DownloadService {
         boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
 
         vidQuality = resolveVideoQuality(vidQuality);
-        audBitrate = resolveAudioBitrate(audBitrate);
 
+        // Support youtube for now
         if(isVideo || isVideoOnly) {
             outputName += ".mp4";
         }
 
-        if(audCodec.isEmpty()) {
-            audCodec = "m4a"; // Assume default
-        }
-
         if(isAudioOnly) {
-            outputName += "." + audCodec;
+            outputName += ".m4a";
         }
 
         List<String> commands = new ArrayList<>();
@@ -422,6 +421,10 @@ public class DownloadService {
         if(error == ErrorCode.UNSUPPORTED_URL) {
             log.info("Unsupported URL");
             throw new UnsupportedUrlException("The URL '" + url + "'' is unsupported");
+        }
+
+        if(error == ErrorCode.FORMAT_UNAVAILABLE) {
+
         }
 
         result.setStatus(RequestStatus.SUCCESS.getString());

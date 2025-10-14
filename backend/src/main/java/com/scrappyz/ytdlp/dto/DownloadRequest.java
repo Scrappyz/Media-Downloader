@@ -9,7 +9,5 @@ public class DownloadRequest {
     private String requestType;
     private String url;
     private int videoQuality;
-    private String audioCodec = "";
-    private int audioBitrate;
 
 }
