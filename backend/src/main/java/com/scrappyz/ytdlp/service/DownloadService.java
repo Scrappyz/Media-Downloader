@@ -34,6 +34,7 @@ import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.dto.DownloadResult;
+import com.scrappyz.ytdlp.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.exception.custom.FullDownloadQueueException;
 import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
 import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
@@ -211,31 +212,41 @@ public class DownloadService {
         return vidQuality;
     }
 
-    private int resolveAudioBitrate(int audBitrate) {
-        Iterator<Integer> iterator = audioBitrate.iterator();
-        int firstValue = iterator.next();
-
-        if(audBitrate < firstValue) return -1;
-
-        if(audioBitrate.contains(audBitrate)) return audBitrate;
-
-        // Get the nearest audio bitrate
-        int prev = -1;
-        for(int i : audioBitrate) {
-            if(i == firstValue) {
-                prev = i;
-                continue;
-            }
-
-            if(audBitrate > prev && audBitrate < i) {
-                audBitrate = prev;
-                break;
-            }
-
-            prev = i;
+    private String resolveVideoFormat(String videoFormat) {
+        if(videoFormat == null || videoFormat.isEmpty()) {
+            return "default";
         }
 
-        return audBitrate;
+        return videoFormat;
+    }
+
+    private String resolveAudioFormat(String audioFormat) {
+        if(audioFormat == null || audioFormat.isEmpty()) {
+            return "default";
+        }
+
+        return audioFormat;
+    }
+
+    private String resolveCommandFormat(MediaType type, String videoFormat, int videoQuality, String audioFormat) {
+        if(type == MediaType.VIDEO) {
+            if(videoFormat.equals("default")) {
+                return String.format("best[height<=%d]", videoQuality);
+            }
+            return String.format("best[ext=%s][height<=%d]/best[height<=%d]", videoFormat, videoQuality, videoQuality);
+        } else if(type == MediaType.VIDEO_ONLY) {
+            if(videoFormat.equals("default")) {
+                return String.format("bestvideo[height<=%d]", videoQuality);
+            }
+            return String.format("bestvideo[ext=%s][height<=%d]/bestvideo[height<=%d]", videoFormat, videoQuality, videoQuality);
+        } else if(type == MediaType.AUDIO_ONLY) {
+            if(audioFormat.equals("default")) {
+                return "bestaudio";
+            }
+            return String.format("bestaudio[ext=%s]/bestaudio", audioFormat);
+        }
+
+        return "best";
     }
 
     private ErrorCode parseError(String error) {
@@ -291,9 +302,10 @@ public class DownloadService {
     }
 
     // Methods:
-    // For video + audio: yt-dlp -f best[ext=mp4][height<=720] https://youtu.be/rQQ09hP-xHI?si=9iL71nxDMiXFP3LG
-    // For video only: yt-dlp -f bestvideo[ext=mp4][height<=720] https://youtu.be/rQQ09hP-xHI?si=9iL71nxDMiXFP3LG
-    // For audio only: yt-dlp -f bestaudio[ext=m4a] https://youtu.be/rQQ09hP-xHI?si=9iL71nxDMiXFP3LG
+    // For video + audio: yt-dlp -f best[ext=mp4][height<=720] <url>
+    // For video only: yt-dlp -f bestvideo[ext=mp4][height<=720] <url>
+    // For audio only: yt-dlp -f bestaudio[ext=m4a] <url>
+    // For getting filename ahead of time: yt-dlp -o "%(title)s.%(ext)s" --get-filename <url>
     @Async("downloadExecutor")
     public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) {
 
@@ -301,7 +313,9 @@ public class DownloadService {
 
         String url = request.getUrl();
         String type = request.getRequestType();
-        int vidQuality = request.getVideoQuality();
+        String vidFormat = resolveVideoFormat(request.getVideoFormat()); 
+        int vidQuality = resolveVideoQuality(request.getVideoQuality());
+        String audFormat = resolveAudioFormat(request.getAudioFormat());
         String outputName = id;
 
         if(url.isEmpty()) {
@@ -312,47 +326,25 @@ public class DownloadService {
 
         Site site = parseSite(url);
 
-        log.info("Downloading " + url);
+        log.info("[DownloadService.download] Downloading: " + url);
 
         MediaType t = MediaType.getMediaType(type);
-
         boolean isVideo = (t == MediaType.VIDEO || t == MediaType.VIDEO_ONLY);
         boolean isVideoOnly = t == MediaType.VIDEO_ONLY;
         boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
 
-        vidQuality = resolveVideoQuality(vidQuality);
+        String format = resolveCommandFormat(t, vidFormat, vidQuality, audFormat);
+        log.info("[DownloadService.download] Command Format: " + format);
 
-        // Support youtube for now
-        if(isVideo || isVideoOnly) {
-            outputName += ".mp4";
-        }
-
-        if(isAudioOnly) {
-            outputName += ".m4a";
-        }
+        outputName = getDefaultFilenameOutput(format, outputName, url);
 
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
-
-        if(isVideo) {
-            commands.addAll(Arrays.asList("-f", "best", "-S", String.format("height:%d", vidQuality)));
-        } else if(isVideoOnly) {
-            commands.addAll(Arrays.asList("-f", "bv", "-S", String.format("height:%d", vidQuality)));
-        } else if(isAudioOnly) {
-            if(site == Site.YOUTUBE) {
-                commands.addAll(Arrays.asList("-f", "140"));
-            } else {
-                throw new UnsupportedUrlException();
-            }
-        }
-
+        commands.addAll(Arrays.asList("-f", format));
         commands.addAll(Arrays.asList(url, "-P", paths.getDownloadPath().toString()));
-
         commands.addAll(Arrays.asList("-o", outputName));
 
-        log.info("[COMMANDS] " + String.join(" ", commands));
-
-        // return String.join(" ", commands);
+        log.info("[DownloadService.download] Commands: " + String.join(" ", commands));
 
         List<String> output = new ArrayList<>();
         List<String> errorOutput = new ArrayList<>();
@@ -414,17 +406,18 @@ public class DownloadService {
         }
 
         if(error == ErrorCode.INVALID_URL) {
-            log.info("Invalid URL");
+            log.info("[DownloadService.download] Invalid URL");
             throw new InvalidUrlException("The URL '" + url + "' is invalid");
         }
 
         if(error == ErrorCode.UNSUPPORTED_URL) {
-            log.info("Unsupported URL");
+            log.info("[DownloadService.download] Unsupported URL");
             throw new UnsupportedUrlException("The URL '" + url + "'' is unsupported");
         }
 
         if(error == ErrorCode.FORMAT_UNAVAILABLE) {
-
+            log.info("[DownloadService.download] Format unavailable");
+            throw new FormatUnavailableException();
         }
 
         result.setStatus(RequestStatus.SUCCESS.getString());
@@ -436,6 +429,108 @@ public class DownloadService {
         log.info("[DownloadService.download] Download with ID " + id + " has finished");
         
         return CompletableFuture.completedFuture(result);
+    }
+
+    public String getDefaultFilenameOutput(String format, String output, String url) {
+        String template = "%(title)s.%(ext)s";
+
+        if(output != null && !output.isEmpty()) {
+            template = output + ".%(ext)s";
+        }
+
+        List<String> commands = new ArrayList<>();
+        commands.add(paths.getYtdlpBin().toString());
+        commands.addAll(Arrays.asList("-f", format, "-o", template, "--get-filename", url));
+
+        List<String> successOutput = new ArrayList<>();
+        List<String> errorOutput = new ArrayList<>();
+
+        try {
+            ProcessBuilder pb = new ProcessBuilder(commands);
+
+            Process process = pb.start();
+
+            // BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+
+            // String line;
+
+            Thread outputStreamConsumer = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        successOutput.add(line); // Or handle the output line as needed
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            outputStreamConsumer.start();
+
+            Thread errorStreamConsumer = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        errorOutput.add(line); // Or handle the error line as needed
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+
+            errorStreamConsumer.start();
+
+            // while ((line = reader.readLine()) != null) {
+            //     output.add(line);
+            // }
+
+            int exitCode = process.waitFor();
+
+            outputStreamConsumer.join();
+            errorStreamConsumer.join();
+        } catch(IOException | InterruptedException e) {
+            return null;
+        }
+
+        ErrorCode error = null;
+
+        if(errorOutput.isEmpty()) {
+            String filename = successOutput.get(0);
+
+            if(filename.isEmpty()) {
+                return "";
+            }
+
+            int lastSeparator = filename.lastIndexOf('/');
+
+            if(lastSeparator < 0) {
+                lastSeparator = filename.lastIndexOf('\\');
+            }
+
+            if(lastSeparator < 0) {
+                return filename;
+            }
+
+            return filename.substring(lastSeparator + 1);
+        }
+
+        error = parseError(errorOutput.get(errorOutput.size() - 1));
+
+        if(error == ErrorCode.INVALID_URL) {
+            log.info("[DownloadService.download] Invalid URL");
+            throw new InvalidUrlException("The URL '" + url + "' is invalid");
+        }
+
+        if(error == ErrorCode.UNSUPPORTED_URL) {
+            log.info("[DownloadService.download] Unsupported URL");
+            throw new UnsupportedUrlException("The URL '" + url + "'' is unsupported");
+        }
+
+        if(error == ErrorCode.FORMAT_UNAVAILABLE) {
+            log.info("[DownloadService.download] Format unavailable");
+            throw new FormatUnavailableException();
+        }
+
+        return null;
     }
 
     public CompletableFuture<DownloadResult> getProcess(String id) throws InvalidProcessException {

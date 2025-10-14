@@ -8,6 +8,8 @@ public class DownloadRequest {
     
     private String requestType;
     private String url;
+    private String videoFormat;
     private int videoQuality;
+    private String audioFormat;
 
 }
