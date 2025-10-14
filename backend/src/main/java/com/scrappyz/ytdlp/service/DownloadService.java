@@ -343,7 +343,7 @@ public class DownloadService {
             if(site == Site.YOUTUBE) {
                 commands.addAll(Arrays.asList("-f", "140"));
             } else {
-                commands.addAll(Arrays.asList("--audio-format", audCodec, "--audio-quality", "0", "-x"));
+                throw new UnsupportedUrlException();
             }
         }
 
