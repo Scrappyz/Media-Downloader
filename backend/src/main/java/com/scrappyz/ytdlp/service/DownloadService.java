@@ -282,11 +282,11 @@ public class DownloadService {
         }
 
         if(audCodec.isEmpty()) {
-            audCodec = ".m4a"; // Assume mp3
+            audCodec = "m4a"; // Assume default
         }
 
         if(isAudioOnly) {
-            outputName += audCodec;
+            outputName += "." + audCodec;
         }
 
         List<String> commands = new ArrayList<>();
@@ -304,7 +304,7 @@ public class DownloadService {
 
         commands.addAll(Arrays.asList("-o", outputName));
 
-        log.debug("[COMMANDS] " + String.join(" ", commands));
+        log.info("[COMMANDS] " + String.join(" ", commands));
 
         // return String.join(" ", commands);
 
@@ -360,8 +360,8 @@ public class DownloadService {
         }
 
         ErrorCode error = null;
-        log.info(output.get(output.size() - 1));
-        log.info(errorOutput.get(errorOutput.size() - 1));
+        // log.info(output.get(output.size() - 1));
+        // log.info(errorOutput.get(errorOutput.size() - 1));
 
         if(!errorOutput.isEmpty()) {
             error = parseError(errorOutput.get(errorOutput.size() - 1));
@@ -382,6 +382,8 @@ public class DownloadService {
         resourceMap.put(id, outputName);
 
         async.expireResource(outputName); // Remove in set time (ms)
+
+        log.info("[DownloadService.download] Download with ID " + id + " has finished");
         
         return CompletableFuture.completedFuture(result);
     }
@@ -427,9 +429,16 @@ public class DownloadService {
         return b;
     }
 
+    public boolean removeProcess(String id) {
+        boolean b = processes.get(id).cancel(true);
+        processes.remove(id);
+        return b;
+    }
+
     public FileSystemResource getResource(String id, boolean removeInResourceMap) throws ResourceNotFoundException {
 
-        if(!resourceMap.contains(id)) {
+        if(!resourceMap.containsKey(id)) {
+            log.info("[DownloadService.getResource] Not in resourceMap");
             throw new ResourceNotFoundException("Could not find resource with ID of " + id);
         }
 
@@ -437,6 +446,7 @@ public class DownloadService {
         File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
 
         if(cancelled.contains(id) || !resourceFile.exists()) {
+            log.info("[DownloadService.getResource] Either cancelled or does not exist");
             throw new ResourceNotFoundException("Could not find resource '" + resourceName + "'");
         }
 

@@ -60,7 +60,7 @@ public class DownloadController {
 
         if(future.isDone()) {
             result = future.getNow(result);
-            downloadService.cancelProcess(requestId);
+            downloadService.removeProcess(requestId);
         }
 
         if(result.getStatus().equals("failed")) {
