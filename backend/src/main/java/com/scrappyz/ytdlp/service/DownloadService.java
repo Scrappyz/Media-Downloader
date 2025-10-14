@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -156,6 +157,31 @@ public class DownloadService {
         }
     };
 
+    public enum Site {
+        YOUTUBE("youtube");
+
+        private final String string;
+        private static final HashMap<String, Site> byString = new HashMap<>();
+
+        static {
+            for(Site t: values()) {
+                byString.put(t.string, t);
+            }
+        }
+
+        private Site(String string) {
+            this.string = string;
+        }
+
+        public String getString() {
+            return string;
+        }
+
+        public static Site getSite(String str) {
+            return byString.get(str);
+        }
+    }
+
     // ---HELPER METHODS---
     private int resolveVideoQuality(int vidQuality) {
         Iterator<Integer> iterator = videoQuality.iterator();
@@ -222,6 +248,21 @@ public class DownloadService {
 
         return null;
     }
+
+    public Site parseSite(String url) {
+        Map<String, Site> siteMap = Map.ofEntries(
+            Map.entry("youtube.com", Site.YOUTUBE),
+            Map.entry("youtu.be", Site.YOUTUBE)
+        );
+
+        for (Map.Entry<String, Site> entry : siteMap.entrySet()) {
+            if(url.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+
+        return null;
+    }
     // ---HELPER METHODS---
 
     // Queue the download request
@@ -266,6 +307,8 @@ public class DownloadService {
             return CompletableFuture.completedFuture(result);
         }
 
+        Site site = parseSite(url);
+
         log.info("Downloading " + url);
 
         MediaType t = MediaType.getMediaType(type);
@@ -297,7 +340,11 @@ public class DownloadService {
         } else if(isVideoOnly) {
             commands.addAll(Arrays.asList("-f", "bv", "-S", String.format("height:%d", vidQuality)));
         } else if(isAudioOnly) {
-            commands.addAll(Arrays.asList("--audio-format", audCodec, "--audio-quality", "0", "-x"));
+            if(site == Site.YOUTUBE) {
+                commands.addAll(Arrays.asList("-f", "140"));
+            } else {
+                commands.addAll(Arrays.asList("--audio-format", audCodec, "--audio-quality", "0", "-x"));
+            }
         }
 
         commands.addAll(Arrays.asList(url, "-P", paths.getDownloadPath().toString()));
