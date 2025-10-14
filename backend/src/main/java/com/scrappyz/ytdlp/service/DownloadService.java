@@ -266,6 +266,8 @@ public class DownloadService {
             return CompletableFuture.completedFuture(result);
         }
 
+        log.info("Downloading " + url);
+
         MediaType t = MediaType.getMediaType(type);
 
         boolean isVideo = (t == MediaType.VIDEO || t == MediaType.VIDEO_ONLY);
