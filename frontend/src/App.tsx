@@ -5,6 +5,7 @@ import { api } from './globals';
 import { useForm } from '@mantine/form';
 
 import '@mantine/core/styles.css';
+import { parseFilenameFromContentDisposition } from './utils';
 
 interface DownloadRequest {
   requestType: string | undefined,
@@ -299,8 +300,17 @@ function App() {
         const res: ApiError = await response.json();
         throw new Error(res.message);
       }
-      
-      window.open(url, "_blank");
+
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filename = parseFilenameFromContentDisposition(contentDisposition);
+      const blobUrl = window.URL.createObjectURL(await response.blob());
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     } catch(error: any) {
       setApiError(error.message);
     }

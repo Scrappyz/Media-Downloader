@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,11 +22,7 @@ import com.scrappyz.ytdlp.dto.DownloadCancelResponse;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.dto.DownloadResult;
-import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
-import com.scrappyz.ytdlp.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
-import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
-import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
 import com.scrappyz.ytdlp.service.DownloadService;
 
 import lombok.RequiredArgsConstructor;
@@ -89,6 +86,7 @@ public class DownloadController {
         outputName += extension;
 
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + outputName);
+        headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
         return ResponseEntity.ok().headers(headers).body(resource);
     }

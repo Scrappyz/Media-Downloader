@@ -177,7 +177,7 @@ public class DownloadHelper {
         boolean isVideoOnly = t == MediaType.VIDEO_ONLY;
         boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
 
-        String format = resolveCommandFormat(t, vidFormat, vidQuality, audFormat);
+        String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audFormat);
         log.info("[DownloadHelper.download] Command Format: " + format);
 
         outputName = getDefaultFilenameOutput(format, outputName, url);
@@ -188,7 +188,7 @@ public class DownloadHelper {
         commands.addAll(Arrays.asList(url, "-P", paths.getDownloadPath().toString()));
         commands.addAll(Arrays.asList("-o", outputName));
 
-        log.info("[DownloadHelper.download] Commands: " + String.join(" ", commands));
+        log.info("[DownloadHelper.download] Download Commands: " + String.join(" ", commands));
 
         ProcessUtils.ProcessResult processResult = new ProcessUtils.ProcessResult();
 
@@ -222,6 +222,8 @@ public class DownloadHelper {
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
         commands.addAll(Arrays.asList("-f", format, "-o", template, "--get-filename", url));
+
+        log.info("[DownloadHelper.download] Default Filename Commands: " + String.join(" ", commands));
 
         ProcessUtils.ProcessResult processResult = new ProcessUtils.ProcessResult();
 
@@ -319,7 +321,7 @@ public class DownloadHelper {
         return audioFormat;
     }
 
-    private String resolveCommandFormat(MediaType type, String videoFormat, int videoQuality, String audioFormat) {
+    private String resolveCommandFormat(MediaType type, Site site, String videoFormat, int videoQuality, String audioFormat) {
         if(type == MediaType.VIDEO) {
             if(videoFormat.equals("default")) {
                 return String.format("best[height<=%d]", videoQuality);
@@ -332,8 +334,12 @@ public class DownloadHelper {
             return String.format("bestvideo[ext=%s][height<=%d]", videoFormat, videoQuality, videoQuality);
         } else if(type == MediaType.AUDIO_ONLY) {
             if(audioFormat.equals("default")) {
+                if(site == Site.YOUTUBE) {
+                    return "140";
+                }
                 return "bestaudio";
             }
+
             return String.format("bestaudio[ext=%s]", audioFormat);
         }
 
