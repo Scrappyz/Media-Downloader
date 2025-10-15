@@ -1,30 +1,12 @@
 package com.scrappyz.ytdlp.service;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.github.f4b6a3.ulid.UlidCreator;
@@ -32,15 +14,7 @@ import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.dto.DownloadResult;
-import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
-import com.scrappyz.ytdlp.exception.custom.FailedProcessException;
-import com.scrappyz.ytdlp.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.exception.custom.FullDownloadQueueException;
-import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
-import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
-import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
-import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
-import com.scrappyz.ytdlp.utils.ProcessUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -52,57 +26,7 @@ public class DownloadService {
 
     private final PathProperties paths;
 
-    @Lazy
-    @Autowired
-    private DownloadService async; // Allow us to execute the asynch method in the same class
- 
-    private static final SortedSet<Integer> videoQuality = new TreeSet<>(
-        Arrays.asList(144, 240, 360, 480, 720, 1080, 2140) // height in pixels (p)
-    );
-
-    private static final HashSet<String> audioCodec = new HashSet<>(
-        Arrays.asList("flac", "alac", "wav", "aiff", "opus", "vorbis", "aac", "mp4a", "m4a", "mp3", "ac4", "eac3", "ac3", "dts")
-    );
-
-    private static final SortedSet<Integer> audioBitrate = new TreeSet<>(
-        Arrays.asList(32, 64, 96, 128, 160, 192, 256, 320) // kbps
-    );
-
-    private final ConcurrentHashMap<String, CompletableFuture<DownloadResult>> processes = new ConcurrentHashMap<>();
-
-    private final Set<String> cancelled = new ConcurrentHashMap<>().newKeySet();
-
-    private final ConcurrentHashMap<String, String> resourceMap = new ConcurrentHashMap<>();
-
-    @Value("#{${resource.expiry.time} * ${time.multiplier}}")
-    private long resourceExpiryTime;
-
-    public enum MediaType {
-        VIDEO("video"),
-        VIDEO_ONLY("video_only"),
-        AUDIO_ONLY("audio_only");
-
-        private final String string;
-        private static final HashMap<String, MediaType> byString = new HashMap<>();
-
-        static {
-            for(MediaType t: values()) {
-                byString.put(t.string, t);
-            }
-        }
-
-        private MediaType(String string) {
-            this.string = string;
-        }
-
-        public String getString() {
-            return string;
-        }
-
-        public static MediaType getMediaType(String str) {
-            return byString.get(str);
-        }
-    };
+    private final DownloadHelper downloadHelper;
 
     public enum RequestStatus {
         SUCCESS("success"),
@@ -133,323 +57,6 @@ public class DownloadService {
         }
     };
 
-    public enum ErrorCode {
-        UNSUPPORTED_URL("unsupported_url"),
-        INVALID_URL("invalid_url"),
-        FORMAT_UNAVAILABLE("format_unavailable");
-
-        private final String string;
-        private static final HashMap<String, ErrorCode> byString = new HashMap<>();
-
-        static {
-            for(ErrorCode t: values()) {
-                byString.put(t.string, t);
-            }
-        }
-
-        private ErrorCode(String string) {
-            this.string = string;
-        }
-
-        public String getString() {
-            return string;
-        }
-
-        public static ErrorCode getErrorCode(String str) {
-            return byString.get(str);
-        }
-    };
-
-    public enum Site {
-        YOUTUBE("youtube");
-
-        private final String string;
-        private static final HashMap<String, Site> byString = new HashMap<>();
-
-        static {
-            for(Site t: values()) {
-                byString.put(t.string, t);
-            }
-        }
-
-        private Site(String string) {
-            this.string = string;
-        }
-
-        public String getString() {
-            return string;
-        }
-
-        public static Site getSite(String str) {
-            return byString.get(str);
-        }
-    }
-
-    // ---HELPER METHODS---
-    private int resolveVideoQuality(int vidQuality) {
-        Iterator<Integer> iterator = videoQuality.iterator();
-        int firstValue = iterator.next();
-
-        if(vidQuality < firstValue) return -1;
-
-        if(videoQuality.contains(vidQuality)) return vidQuality;
-
-        // Get the nearest video quality
-        int prev = -1;
-        for(int i : videoQuality) {
-            if(i == firstValue) {
-                prev = i;
-                continue;
-            }
-
-            if(vidQuality > prev && vidQuality < i) {
-                vidQuality = prev;
-                break;
-            }
-
-            prev = i;
-        }
-
-        return vidQuality;
-    }
-
-    private String resolveVideoFormat(String videoFormat) {
-        if(videoFormat == null || videoFormat.isEmpty()) {
-            return "default";
-        }
-
-        return videoFormat;
-    }
-
-    private String resolveAudioFormat(String audioFormat) {
-        if(audioFormat == null || audioFormat.isEmpty()) {
-            return "default";
-        }
-
-        return audioFormat;
-    }
-
-    private String resolveCommandFormat(MediaType type, String videoFormat, int videoQuality, String audioFormat) {
-        if(type == MediaType.VIDEO) {
-            if(videoFormat.equals("default")) {
-                return String.format("best[height<=%d]", videoQuality);
-            }
-            return String.format("best[ext=%s][height<=%d]", videoFormat, videoQuality, videoQuality);
-        } else if(type == MediaType.VIDEO_ONLY) {
-            if(videoFormat.equals("default")) {
-                return String.format("bestvideo[height<=%d]", videoQuality);
-            }
-            return String.format("bestvideo[ext=%s][height<=%d]", videoFormat, videoQuality, videoQuality);
-        } else if(type == MediaType.AUDIO_ONLY) {
-            if(audioFormat.equals("default")) {
-                return "bestaudio";
-            }
-            return String.format("bestaudio[ext=%s]", audioFormat);
-        }
-
-        return "best";
-    }
-
-    private ErrorCode parseError(String error) {
-        if(error.contains("Unsupported URL")) {
-            return ErrorCode.UNSUPPORTED_URL;
-        }
-
-        if(error.contains("not a valid URL")) {
-            return ErrorCode.INVALID_URL;
-        }
-
-        if(error.contains("Requested format is not available")) {
-            return ErrorCode.FORMAT_UNAVAILABLE;
-        }
-
-        return null;
-    }
-
-    private Site parseSite(String url) {
-        Map<String, Site> siteMap = Map.ofEntries(
-            Map.entry("youtube.com", Site.YOUTUBE),
-            Map.entry("youtu.be", Site.YOUTUBE)
-        );
-
-        for (Map.Entry<String, Site> entry : siteMap.entrySet()) {
-            if(url.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-
-        return null;
-    }
-    // ---HELPER METHODS---
-
-    @Async("resourceExecutor")
-    public CompletableFuture<Boolean> cleanup(String id, String resourceName) { // Delete downloaded resource after a certain time. Also cleanup
-        try {
-            Thread.sleep(resourceExpiryTime);
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
-
-        if(processes.containsKey(id)) {
-            log.info("[DownloadService.cleanup] Cleaned up process with ID " + id);
-            removeProcess(id);
-        }
-
-        if(resourceMap.containsKey(id)) {
-            log.info("[DownloadService.cleanup] Remove resource map with ID " + id);
-            resourceMap.remove(id);
-        }
-
-        if(cancelled.contains(id)) {
-            log.info("[DownloadService.cleanup] Cancelled download ID \"" + id + "\" expired");
-            cancelled.remove(id);
-        }
-
-        try {
-            boolean deleted = Files.deleteIfExists(resourcePath);
-            log.info("Resource \"" + resourceName + "\" expired");
-            return CompletableFuture.completedFuture(deleted);
-        } catch(IOException e) {
-            e.printStackTrace();
-            return CompletableFuture.failedFuture(e);
-        }
-    }
-
-    // Methods:
-    // For video + audio: yt-dlp -f best[ext=mp4][height<=720] <url>
-    // For video only: yt-dlp -f bestvideo[ext=mp4][height<=720] <url>
-    // For audio only: yt-dlp -f bestaudio[ext=m4a] <url>
-    // For getting filename ahead of time: yt-dlp -o "%(title)s.%(ext)s" --get-filename <url>
-    @Async("downloadExecutor")
-    public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) 
-        throws InvalidUrlException, UnsupportedUrlException, FormatUnavailableException, DownloadFailedException, FailedProcessException {
-
-        DownloadResult result = new DownloadResult();
-
-        String url = request.getUrl();
-        String type = request.getRequestType();
-        String vidFormat = resolveVideoFormat(request.getVideoFormat()); 
-        int vidQuality = resolveVideoQuality(request.getVideoQuality());
-        String audFormat = resolveAudioFormat(request.getAudioFormat());
-        String outputName = id;
-
-        if(url.isEmpty()) {
-            throw new InvalidUrlException("The URL provided is empty");
-        }
-
-        if(vidQuality < 0) {
-            vidQuality = 360;
-        }
-
-        Site site = parseSite(url);
-
-        log.info("[DownloadService.download] Downloading: " + url);
-
-        MediaType t = MediaType.getMediaType(type);
-        boolean isVideo = (t == MediaType.VIDEO || t == MediaType.VIDEO_ONLY);
-        boolean isVideoOnly = t == MediaType.VIDEO_ONLY;
-        boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
-
-        String format = resolveCommandFormat(t, vidFormat, vidQuality, audFormat);
-        log.info("[DownloadService.download] Command Format: " + format);
-
-        outputName = getDefaultFilenameOutput(format, outputName, url);
-
-        List<String> commands = new ArrayList<>();
-        commands.add(paths.getYtdlpBin().toString());
-        commands.addAll(Arrays.asList("-f", format));
-        commands.addAll(Arrays.asList(url, "-P", paths.getDownloadPath().toString()));
-        commands.addAll(Arrays.asList("-o", outputName));
-
-        log.info("[DownloadService.download] Commands: " + String.join(" ", commands));
-
-        ProcessUtils.ProcessResult processResult = new ProcessUtils.ProcessResult();
-
-        try {
-            processResult = ProcessUtils.runProcess(commands);
-        } catch(IOException | InterruptedException e) {
-            log.info("[DownloadService.download] Remove process with ID " + id + " because of error");
-            throw new DownloadFailedException();
-        }
-
-        result.setStatus(RequestStatus.SUCCESS.getString());
-        result.setMessage("Download has finished");
-        resourceMap.put(id, outputName);
-
-        async.cleanup(id, outputName); // Remove in set time (ms)
-
-        log.info("[DownloadService.download] Download with ID " + id + " has finished");
-        
-        return CompletableFuture.completedFuture(result);
-    }
-
-    public String getDefaultFilenameOutput(String format, String output, String url)
-        throws FailedProcessException, InvalidUrlException, UnsupportedUrlException, FormatUnavailableException {
-
-        String template = "%(title)s.%(ext)s";
-
-        if(output != null && !output.isEmpty()) {
-            template = output + ".%(ext)s";
-        }
-
-        List<String> commands = new ArrayList<>();
-        commands.add(paths.getYtdlpBin().toString());
-        commands.addAll(Arrays.asList("-f", format, "-o", template, "--get-filename", url));
-
-        ProcessUtils.ProcessResult processResult = new ProcessUtils.ProcessResult();
-
-        try {
-            processResult = ProcessUtils.runProcess(commands);
-        } catch(IOException | InterruptedException e) {
-            throw new FailedProcessException();
-        }
-
-        ErrorCode error = null;
-        List<String> successOutput = processResult.getOutput();
-        List<String> errorOutput = processResult.getErrorOutput();
-
-        if(errorOutput.isEmpty()) {
-            String filename = successOutput.get(0);
-
-            if(filename.isEmpty()) {
-                return "";
-            }
-
-            int lastSeparator = filename.lastIndexOf('/');
-
-            if(lastSeparator < 0) {
-                lastSeparator = filename.lastIndexOf('\\');
-            }
-
-            if(lastSeparator < 0) {
-                return filename;
-            }
-
-            return filename.substring(lastSeparator + 1);
-        }
-
-        error = parseError(errorOutput.get(errorOutput.size() - 1));
-
-        if(error == ErrorCode.INVALID_URL) {
-            log.info("[DownloadService.download] Invalid URL");
-            throw new InvalidUrlException("The URL '" + url + "' is invalid");
-        }
-
-        if(error == ErrorCode.UNSUPPORTED_URL) {
-            log.info("[DownloadService.download] Unsupported URL");
-            throw new UnsupportedUrlException("The URL '" + url + "'' is unsupported");
-        }
-
-        if(error == ErrorCode.FORMAT_UNAVAILABLE) {
-            log.info("[DownloadService.download] Format unavailable");
-            throw new FormatUnavailableException("The requested format is unavailable");
-        }
-
-        return null;
-    }
-
     // Queue the download request
     public DownloadResponse enqueue(DownloadRequest request) {
         DownloadResponse result = new DownloadResponse();
@@ -457,7 +64,7 @@ public class DownloadService {
         String id = UlidCreator.getMonotonicUlid().toString();
 
         try {
-            f = async.download(id, request); // Run in the background
+            f = downloadHelper.download(id, request); // Run in the background
         } catch(RejectedExecutionException e) {
             log.info("[ERROR] Rejected Execution due to full queue");
             throw new FullDownloadQueueException("Download queue is full");
@@ -465,97 +72,29 @@ public class DownloadService {
 
         result.setRequestId(id);
 
-        processes.put(id, f);
+        downloadHelper.addProcess(id, f);
 
         return result;
     }
 
-    public CompletableFuture<DownloadResult> getProcess(String id) throws InvalidProcessException {
-        if(!processes.containsKey(id)) {
-            throw new InvalidProcessException("Process with request ID " + id + " could not be found");
-        }
-
-        return processes.get(id);
-    }
-
-    public String getProcessStatus(String id) throws InvalidProcessException {
-        if(!processes.containsKey(id)) {
-            throw new InvalidProcessException("Process with request ID " + id + " could not be found");
-        }
-
-        CompletableFuture<DownloadResult> future = processes.get(id);
-
-        if(!future.isDone()) {
-            return RequestStatus.PENDING.getString();
-        }
-
-        return future.getNow(new DownloadResult()).getStatus();
-    }
-
-    public boolean isProcessFinished(String id) throws InvalidProcessException {
-        if(!processes.containsKey(id)) {
-            throw new InvalidProcessException("Process with request ID " + id + " could not be found");
-        }
-
-        return processes.get(id).isDone();
-    }
-
-    public boolean isProcessExist(String id) {
-        return processes.containsKey(id);
-    }
-
-    public boolean cancelProcess(String id) {
-        boolean b = processes.get(id).cancel(true);
-        processes.remove(id);
-        cancelled.add(id);
-        return b;
+    public CompletableFuture<DownloadResult> getProcess(String id) {
+        return downloadHelper.getProcess(id);
     }
 
     public boolean removeProcess(String id) {
-        boolean b = processes.get(id).cancel(true);
-        processes.remove(id);
-        return b;
+        return downloadHelper.removeProcess(id);
     }
 
-    public FileSystemResource getResource(String id, boolean removeInResourceMap) throws ResourceNotFoundException {
-
-        if(!resourceMap.containsKey(id)) {
-            log.info("[DownloadService.getResource] Not in resourceMap");
-            throw new ResourceNotFoundException("Could not find resource with ID of " + id);
-        }
-
-        String resourceName = resourceMap.get(id);
-        File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
-
-        if(cancelled.contains(id) || !resourceFile.exists()) {
-            log.info("[DownloadService.getResource] Either cancelled or does not exist");
-            throw new ResourceNotFoundException("Could not find resource '" + resourceName + "'");
-        }
-
-        if(removeInResourceMap) {
-            resourceMap.remove(id);
-        }
-
-        return new FileSystemResource(resourceFile);
+    public boolean cancelProcess(String id) {
+        return downloadHelper.cancelProcess(id);
     }
 
-    public FileSystemResource getResource(String id) throws ResourceNotFoundException {
-        return getResource(id, true);
+    public FileSystemResource getResource(String id) {
+        return downloadHelper.getResource(id);
     }
 
-    public boolean removeResource(String id) {
-        String resourceName = resourceMap.get(id);
-        Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
-        boolean deleted;
-
-        try {
-            deleted = Files.deleteIfExists(resourcePath);
-        } catch(IOException e) {
-            return false;
-        }
-
-        resourceMap.remove(id);
-
-        return deleted;
+    public boolean isProcessExist(String id) {
+        return downloadHelper.isProcessExist(id);
     }
+    
 }

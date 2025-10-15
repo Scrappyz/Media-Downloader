@@ -66,10 +66,6 @@ public class DownloadController {
             downloadService.removeProcess(requestId);
         }
 
-        if(result.getStatus().equals("failed")) {
-            throw new DownloadFailedException();
-        }
-
         return ResponseEntity.ok().body(result);
     }
 
