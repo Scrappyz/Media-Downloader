@@ -1,9 +1,7 @@
 package com.scrappyz.ytdlp.service;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -34,6 +32,7 @@ import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.dto.DownloadResult;
+import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.exception.custom.FailedProcessException;
 import com.scrappyz.ytdlp.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.exception.custom.FullDownloadQueueException;
@@ -55,7 +54,7 @@ public class DownloadService {
 
     @Lazy
     @Autowired
-    private DownloadService async; // Allow us to execute the asynch method
+    private DownloadService async; // Allow us to execute the asynch method in the same class
  
     private static final SortedSet<Integer> videoQuality = new TreeSet<>(
         Arrays.asList(144, 240, 360, 480, 720, 1080, 2140) // height in pixels (p)
@@ -235,17 +234,17 @@ public class DownloadService {
             if(videoFormat.equals("default")) {
                 return String.format("best[height<=%d]", videoQuality);
             }
-            return String.format("best[ext=%s][height<=%d]/best[height<=%d]", videoFormat, videoQuality, videoQuality);
+            return String.format("best[ext=%s][height<=%d]", videoFormat, videoQuality, videoQuality);
         } else if(type == MediaType.VIDEO_ONLY) {
             if(videoFormat.equals("default")) {
                 return String.format("bestvideo[height<=%d]", videoQuality);
             }
-            return String.format("bestvideo[ext=%s][height<=%d]/bestvideo[height<=%d]", videoFormat, videoQuality, videoQuality);
+            return String.format("bestvideo[ext=%s][height<=%d]", videoFormat, videoQuality, videoQuality);
         } else if(type == MediaType.AUDIO_ONLY) {
             if(audioFormat.equals("default")) {
                 return "bestaudio";
             }
-            return String.format("bestaudio[ext=%s]/bestaudio", audioFormat);
+            return String.format("bestaudio[ext=%s]", audioFormat);
         }
 
         return "best";
@@ -283,24 +282,39 @@ public class DownloadService {
     }
     // ---HELPER METHODS---
 
-    // Queue the download request
-    public DownloadResponse enqueue(DownloadRequest request) {
-        DownloadResponse result = new DownloadResponse();
-        CompletableFuture<DownloadResult> f = new CompletableFuture<>();
-        String id = UlidCreator.getMonotonicUlid().toString();
-
+    @Async("resourceExecutor")
+    public CompletableFuture<Boolean> cleanup(String id, String resourceName) { // Delete downloaded resource after a certain time. Also cleanup
         try {
-            f = async.download(id, request); // Run in the background
-        } catch(RejectedExecutionException e) {
-            log.info("[ERROR] Rejected Execution due to full queue");
-            throw new FullDownloadQueueException("Download queue is full");
+            Thread.sleep(resourceExpiryTime);
+        } catch(InterruptedException e) {
+            e.printStackTrace();
         }
 
-        result.setRequestId(id);
+        Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
 
-        processes.put(id, f);
+        if(processes.containsKey(id)) {
+            log.info("[DownloadService.cleanup] Cleaned up process with ID " + id);
+            removeProcess(id);
+        }
 
-        return result;
+        if(resourceMap.containsKey(id)) {
+            log.info("[DownloadService.cleanup] Remove resource map with ID " + id);
+            resourceMap.remove(id);
+        }
+
+        if(cancelled.contains(id)) {
+            log.info("[DownloadService.cleanup] Cancelled download ID \"" + id + "\" expired");
+            cancelled.remove(id);
+        }
+
+        try {
+            boolean deleted = Files.deleteIfExists(resourcePath);
+            log.info("Resource \"" + resourceName + "\" expired");
+            return CompletableFuture.completedFuture(deleted);
+        } catch(IOException e) {
+            e.printStackTrace();
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     // Methods:
@@ -309,7 +323,8 @@ public class DownloadService {
     // For audio only: yt-dlp -f bestaudio[ext=m4a] <url>
     // For getting filename ahead of time: yt-dlp -o "%(title)s.%(ext)s" --get-filename <url>
     @Async("downloadExecutor")
-    public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) {
+    public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) 
+        throws InvalidUrlException, UnsupportedUrlException, FormatUnavailableException, DownloadFailedException, FailedProcessException {
 
         DownloadResult result = new DownloadResult();
 
@@ -321,9 +336,7 @@ public class DownloadService {
         String outputName = id;
 
         if(url.isEmpty()) {
-            result.setStatus("failed");
-            result.setMessage("URL is empty");
-            return CompletableFuture.completedFuture(result);
+            throw new InvalidUrlException("The URL provided is empty");
         }
 
         if(vidQuality < 0) {
@@ -357,45 +370,24 @@ public class DownloadService {
         try {
             processResult = ProcessUtils.runProcess(commands);
         } catch(IOException | InterruptedException e) {
-            result.setStatus("failed");
-            result.setMessage(e.getMessage());
-            return CompletableFuture.completedFuture(result);
-        }
-
-        ErrorCode error = null;
-
-        if(processResult.hasErrors()) {
-            List<String> errorOutput = processResult.getErrorOutput();
-            error = parseError(errorOutput.get(errorOutput.size() - 1));
-        }
-
-        if(error == ErrorCode.INVALID_URL) {
-            log.info("[DownloadService.download] Invalid URL");
-            throw new InvalidUrlException("The URL '" + url + "' is invalid");
-        }
-
-        if(error == ErrorCode.UNSUPPORTED_URL) {
-            log.info("[DownloadService.download] Unsupported URL");
-            throw new UnsupportedUrlException("The URL '" + url + "'' is unsupported");
-        }
-
-        if(error == ErrorCode.FORMAT_UNAVAILABLE) {
-            log.info("[DownloadService.download] Format unavailable");
-            throw new FormatUnavailableException();
+            log.info("[DownloadService.download] Remove process with ID " + id + " because of error");
+            throw new DownloadFailedException();
         }
 
         result.setStatus(RequestStatus.SUCCESS.getString());
         result.setMessage("Download has finished");
         resourceMap.put(id, outputName);
 
-        async.expireResource(outputName); // Remove in set time (ms)
+        async.cleanup(id, outputName); // Remove in set time (ms)
 
         log.info("[DownloadService.download] Download with ID " + id + " has finished");
         
         return CompletableFuture.completedFuture(result);
     }
 
-    public String getDefaultFilenameOutput(String format, String output, String url) {
+    public String getDefaultFilenameOutput(String format, String output, String url)
+        throws FailedProcessException, InvalidUrlException, UnsupportedUrlException, FormatUnavailableException {
+
         String template = "%(title)s.%(ext)s";
 
         if(output != null && !output.isEmpty()) {
@@ -452,10 +444,30 @@ public class DownloadService {
 
         if(error == ErrorCode.FORMAT_UNAVAILABLE) {
             log.info("[DownloadService.download] Format unavailable");
-            throw new FormatUnavailableException();
+            throw new FormatUnavailableException("The requested format is unavailable");
         }
 
         return null;
+    }
+
+    // Queue the download request
+    public DownloadResponse enqueue(DownloadRequest request) {
+        DownloadResponse result = new DownloadResponse();
+        CompletableFuture<DownloadResult> f = new CompletableFuture<>();
+        String id = UlidCreator.getMonotonicUlid().toString();
+
+        try {
+            f = async.download(id, request); // Run in the background
+        } catch(RejectedExecutionException e) {
+            log.info("[ERROR] Rejected Execution due to full queue");
+            throw new FullDownloadQueueException("Download queue is full");
+        }
+
+        result.setRequestId(id);
+
+        processes.put(id, f);
+
+        return result;
     }
 
     public CompletableFuture<DownloadResult> getProcess(String id) throws InvalidProcessException {
@@ -545,33 +557,5 @@ public class DownloadService {
         resourceMap.remove(id);
 
         return deleted;
-    }
-
-    @Async("resourceExecutor")
-    public CompletableFuture<Boolean> expireResource(String resourceName) { // Delete downloaded resource after a certain time
-        try {
-            Thread.sleep(resourceExpiryTime);
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
-
-        int extensionIndex = resourceName.lastIndexOf('.');
-        String id = resourceName.substring(0, extensionIndex);
-
-        if(cancelled.contains(id)) {
-            log.info("Cancelled download ID \"" + id + "\" expired");
-            cancelled.remove(id);
-        }
-
-        try {
-            boolean deleted = Files.deleteIfExists(resourcePath);
-            log.info("Resource \"" + resourceName + "\" expired");
-            return CompletableFuture.completedFuture(deleted);
-        } catch(IOException e) {
-            e.printStackTrace();
-            return CompletableFuture.failedFuture(e);
-        }
     }
 }

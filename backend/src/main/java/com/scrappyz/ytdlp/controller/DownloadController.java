@@ -22,7 +22,10 @@ import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.dto.DownloadResult;
 import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
+import com.scrappyz.ytdlp.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
+import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
+import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
 import com.scrappyz.ytdlp.service.DownloadService;
 
 import lombok.RequiredArgsConstructor;
