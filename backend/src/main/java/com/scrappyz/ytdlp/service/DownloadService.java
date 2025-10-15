@@ -34,12 +34,14 @@ import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.dto.DownloadResult;
+import com.scrappyz.ytdlp.exception.custom.FailedProcessException;
 import com.scrappyz.ytdlp.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.exception.custom.FullDownloadQueueException;
 import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
 import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
+import com.scrappyz.ytdlp.utils.ProcessUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -265,7 +267,7 @@ public class DownloadService {
         return null;
     }
 
-    public Site parseSite(String url) {
+    private Site parseSite(String url) {
         Map<String, Site> siteMap = Map.ofEntries(
             Map.entry("youtube.com", Site.YOUTUBE),
             Map.entry("youtu.be", Site.YOUTUBE)
@@ -324,6 +326,10 @@ public class DownloadService {
             return CompletableFuture.completedFuture(result);
         }
 
+        if(vidQuality < 0) {
+            vidQuality = 360;
+        }
+
         Site site = parseSite(url);
 
         log.info("[DownloadService.download] Downloading: " + url);
@@ -346,62 +352,20 @@ public class DownloadService {
 
         log.info("[DownloadService.download] Commands: " + String.join(" ", commands));
 
-        List<String> output = new ArrayList<>();
-        List<String> errorOutput = new ArrayList<>();
+        ProcessUtils.ProcessResult processResult = new ProcessUtils.ProcessResult();
 
         try {
-            ProcessBuilder pb = new ProcessBuilder(commands);
-
-            Process process = pb.start();
-
-            // BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-
-            // String line;
-
-            Thread outputStreamConsumer = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        output.add(line); // Or handle the output line as needed
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-            outputStreamConsumer.start();
-
-            Thread errorStreamConsumer = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        errorOutput.add(line); // Or handle the error line as needed
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-
-            errorStreamConsumer.start();
-
-            // while ((line = reader.readLine()) != null) {
-            //     output.add(line);
-            // }
-
-            int exitCode = process.waitFor();
-
-            outputStreamConsumer.join();
-            errorStreamConsumer.join();
+            processResult = ProcessUtils.runProcess(commands);
         } catch(IOException | InterruptedException e) {
             result.setStatus("failed");
-            result.setMessage("Something went wrong");
+            result.setMessage(e.getMessage());
             return CompletableFuture.completedFuture(result);
         }
 
         ErrorCode error = null;
-        // log.info(output.get(output.size() - 1));
-        // log.info(errorOutput.get(errorOutput.size() - 1));
 
-        if(!errorOutput.isEmpty()) {
+        if(processResult.hasErrors()) {
+            List<String> errorOutput = processResult.getErrorOutput();
             error = parseError(errorOutput.get(errorOutput.size() - 1));
         }
 
@@ -442,56 +406,17 @@ public class DownloadService {
         commands.add(paths.getYtdlpBin().toString());
         commands.addAll(Arrays.asList("-f", format, "-o", template, "--get-filename", url));
 
-        List<String> successOutput = new ArrayList<>();
-        List<String> errorOutput = new ArrayList<>();
+        ProcessUtils.ProcessResult processResult = new ProcessUtils.ProcessResult();
 
         try {
-            ProcessBuilder pb = new ProcessBuilder(commands);
-
-            Process process = pb.start();
-
-            // BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-
-            // String line;
-
-            Thread outputStreamConsumer = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        successOutput.add(line); // Or handle the output line as needed
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-            outputStreamConsumer.start();
-
-            Thread errorStreamConsumer = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        errorOutput.add(line); // Or handle the error line as needed
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-
-            errorStreamConsumer.start();
-
-            // while ((line = reader.readLine()) != null) {
-            //     output.add(line);
-            // }
-
-            int exitCode = process.waitFor();
-
-            outputStreamConsumer.join();
-            errorStreamConsumer.join();
+            processResult = ProcessUtils.runProcess(commands);
         } catch(IOException | InterruptedException e) {
-            return null;
+            throw new FailedProcessException();
         }
 
         ErrorCode error = null;
+        List<String> successOutput = processResult.getOutput();
+        List<String> errorOutput = processResult.getErrorOutput();
 
         if(errorOutput.isEmpty()) {
             String filename = successOutput.get(0);
