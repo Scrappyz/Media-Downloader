@@ -170,7 +170,7 @@ public class DownloadHelper {
 
         Site site = parseSite(url);
 
-        log.info("[DownloadService.download] Downloading: " + url);
+        log.info("[DownloadHelper.download] Downloading: " + url);
 
         MediaType t = MediaType.getMediaType(type);
         boolean isVideo = (t == MediaType.VIDEO || t == MediaType.VIDEO_ONLY);
@@ -178,7 +178,7 @@ public class DownloadHelper {
         boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
 
         String format = resolveCommandFormat(t, vidFormat, vidQuality, audFormat);
-        log.info("[DownloadService.download] Command Format: " + format);
+        log.info("[DownloadHelper.download] Command Format: " + format);
 
         outputName = getDefaultFilenameOutput(format, outputName, url);
 
@@ -195,7 +195,7 @@ public class DownloadHelper {
         try {
             processResult = ProcessUtils.runProcess(commands);
         } catch(IOException | InterruptedException e) {
-            log.info("[DownloadService.download] Remove process with ID " + id + " because of error");
+            log.info("[DownloadHelper.download] Remove process with ID " + id + " because of error");
             throw new DownloadFailedException();
         }
 
@@ -203,9 +203,9 @@ public class DownloadHelper {
         result.setMessage("Download has finished");
         resourceMap.put(id, outputName);
 
-        resourceHelper.cleanup(outputName); // Remove in set time (ms)
+        resourceHelper.cleanup(id, outputName, processes, cancelled, resourceMap); // Remove in set time (ms)
 
-        log.info("[DownloadService.download] Download with ID " + id + " has finished");
+        log.info("[DownloadHelper.download] Download with ID " + id + " has finished");
         
         return CompletableFuture.completedFuture(result);
     }
@@ -258,17 +258,17 @@ public class DownloadHelper {
         error = parseError(errorOutput.get(errorOutput.size() - 1));
 
         if(error == ErrorCode.INVALID_URL) {
-            log.info("[DownloadService.download] Invalid URL");
+            log.info("[DownloadHelper.download] Invalid URL");
             throw new InvalidUrlException("The URL '" + url + "' is invalid");
         }
 
         if(error == ErrorCode.UNSUPPORTED_URL) {
-            log.info("[DownloadService.download] Unsupported URL");
+            log.info("[DownloadHelper.download] Unsupported URL");
             throw new UnsupportedUrlException("The URL '" + url + "'' is unsupported");
         }
 
         if(error == ErrorCode.FORMAT_UNAVAILABLE) {
-            log.info("[DownloadService.download] Format unavailable");
+            log.info("[DownloadHelper.download] Format unavailable");
             throw new FormatUnavailableException("The requested format is unavailable");
         }
 
@@ -426,7 +426,7 @@ public class DownloadHelper {
     public FileSystemResource getResource(String id, boolean removeInResourceMap) throws ResourceNotFoundException {
 
         if(!resourceMap.containsKey(id)) {
-            log.info("[DownloadService.getResource] Not in resourceMap");
+            log.info("[DownloadHelper.getResource] Not in resourceMap");
             throw new ResourceNotFoundException("Could not find resource with ID of " + id);
         }
 
@@ -434,7 +434,7 @@ public class DownloadHelper {
         File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
 
         if(cancelled.contains(id) || !resourceFile.exists()) {
-            log.info("[DownloadService.getResource] Either cancelled or does not exist");
+            log.info("[DownloadHelper.getResource] Either cancelled or does not exist");
             throw new ResourceNotFoundException("Could not find resource '" + resourceName + "'");
         }
 
@@ -463,5 +463,17 @@ public class DownloadHelper {
         resourceMap.remove(id);
 
         return deleted;
+    }
+
+    public String getProcessesAsString() {
+        return processes.keySet().toString();
+    }
+
+    public String getResourceMapAsString() {
+        return resourceMap.keySet().toString();
+    }
+
+    public String getCancelledAsString() {
+        return cancelled.toString();
     }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Input } from '@mantine/core';
+import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Input, Loader, Center } from '@mantine/core';
 
 import { api } from './globals';
 import { useForm } from '@mantine/form';
@@ -10,8 +10,9 @@ interface DownloadRequest {
   requestType: string | undefined,
   url: string,
   videoQuality?: number,
-  audioCodec?: string,
-  audioBitrate?: number
+  videoFormat?: string,
+  audioFormat?: string,
+  outputName?: string
 };
 
 interface DownloadResponse {
@@ -23,6 +24,11 @@ interface StatusResponse {
   message: string | null
 };
 
+interface ApiError {
+  code: string,
+  message: string
+}
+
 function App() {
 
   const [apiError, setApiError] = useState<string | null>(null);
@@ -30,11 +36,12 @@ function App() {
   const [isPolling, setIsPolling] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
 
-  console.log("RequestID:", requestId);
+  // console.log("RequestID:", requestId);
 
   const mediaTypes: string[] = ["Video", "Video Only", "Audio Only"];
   const videoQualities: string[] = ["144p", "240p", "360p", "480p", "720p", "1080p", "2160p"];
-  const audioCodecs: string[] = ["mp3", "m4a", "wav", "flac"];
+  const videoFormats: string[] = ["mp4", "mkv"];
+  const audioFormats: string[] = ["mp3", "m4a", "wav", "flac"];
   const pollInterval: number = 5000;
 
   const mediaTypeMap = new Map<string, string>([
@@ -44,12 +51,14 @@ function App() {
   ]);
 
   const form = useForm({
-    mode: 'controlled',
+    mode: 'uncontrolled',
     initialValues: {
       type: "Video",
       url: "",
       videoQuality: "480p",
-      audioCodec: "m4a"
+      videoFormat: "Default",
+      audioFormat: "Default",
+      outputName: ""
     },
     validate: {
       url: (value) => {
@@ -111,16 +120,25 @@ function App() {
     }
 
     if(values.type === "Audio Only") {
-      request.audioCodec = values.audioCodec;
+      if(values.audioFormat !== "Default") {
+        request.audioFormat = values.audioFormat;
+      }
     } else {
       request.videoQuality = parseInt(values.videoQuality);
+      if(values.videoFormat !== "Default") {
+        request.videoFormat = values.videoFormat;
+      }
     }
 
     return request;
   }
 
   const handleSubmit = async (values: FormValues): Promise<any> => {
+    setDownloadStatus(null);
+
+    console.log("Form Values:", values);
     const request = transformRequest(values);
+    console.log("Request Data:", request);
 
     try {
       const response = await fetch(api + "/downloads", {
@@ -167,9 +185,9 @@ function App() {
           signal: ac.signal,
         });
 
-        if(!res.ok) {
-          const txt = await res.text();
-          throw new Error(`Status fetch failed: ${res.status} ${txt}`);
+        if(!res.ok) { // If it is not ok, stop polling
+          const response: ApiError = await res.json();
+          throw new Error(response.message);
         }
 
         const body: StatusResponse = await res.json();
@@ -178,7 +196,7 @@ function App() {
 
         setDownloadStatus(body.status);
 
-        if(body.status === "success" || body.status === "failed") {
+        if(body.status === "success") {
           setIsPolling(false);
           return;
         }
@@ -190,14 +208,20 @@ function App() {
           };
         }, pollInterval);
 
-      } catch (error: any) {
-        if (error.name === "AbortError") {
+      } catch(error: any) {
+
+        if(error.name === "AbortError") {
           return;
         }
 
+        setIsPolling(false);
+
         // network or server error — show and retry after interval
-        if (!mounted.current) return;
+        if(!mounted.current) return;
+
         setApiError(error?.message ?? "Polling error");
+
+        setDownloadStatus(null);
 
         timer = setTimeout(() => {
           if (!stopped) {
@@ -231,15 +255,59 @@ function App() {
     currentAbort.current?.abort();
   };
 
-  const downloadFile = () => {
-    if (!requestId) return;
-    // either the status response provided a link: /api/v1/downloads/{id}/file
-    const url = api + `/downloads/${encodeURIComponent(requestId)}/file`;
-    window.open(url, "_blank");
+  const cancelRequest = async () => {
+    try {
+      const response = await fetch(api + `/downloads/${requestId}`, {
+        method: "DELETE",
+        headers: { "Accept": "application/json" },
+      });
+
+      if(!response.ok) {
+        const result: ApiError = await response.json();
+        throw new Error(result.message);
+      }
+
+      const data: StatusResponse = await response.json();
+
+      if(data.status === "success") {
+        reset();
+      }
+
+    } catch(error: any) {
+      console.error(error.message);
+    }
+  }
+
+  const downloadFile = async () => {
+    if(!requestId) {
+      return;
+    }
+
+    let url = api + `/downloads/${encodeURIComponent(requestId)}/file`;
+    const outputName = form.getValues().outputName;
+
+    if(outputName !== null && outputName.length > 0) {
+      url += `?output=${outputName}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "GET"
+      });
+
+      if(!response.ok) {
+        const res: ApiError = await response.json();
+        throw new Error(res.message);
+      }
+      
+      window.open(url, "_blank");
+    } catch(error: any) {
+      setApiError(error.message);
+    }
   };
 
   return (
-    <MantineProvider defaultColorScheme="dark">
+    <MantineProvider defaultColorScheme="light">
       <Flex pl="10%" pr="10%" h="100vh" direction="column" justify="center" align="center" gap="lg">
         <Title order={2}>Youtube Downloader</Title>
         <form onSubmit={form.onSubmit((values) => handleSubmit(values))}>
@@ -250,24 +318,52 @@ function App() {
                 label='URL' withAsterisk key={form.key("url")} 
                 placeholder='Enter video link here'
                 rightSection={
-                  <Button onClick={handlePaste} h='100%' w='100%' p={0} m={0}>Paste</Button>
+                  <Button bg='red' radius={2} onClick={handlePaste} h='100%' w='100%' p={0} m={0}>Paste</Button>
                 }
                 rightSectionWidth={75}
               />
             </Group>
             {
               isVideo ? (
-                <NativeSelect {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={videoQualities} />
+                <>
+                  <NativeSelect {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={videoQualities} />
+                  <NativeSelect {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={["Default", ...videoFormats]} />
+                </>
               ) : (
-                <NativeSelect {...form.getInputProps('audioCodec')} label='Audio Codec' withAsterisk key={form.key("audioCodec")} data={audioCodecs} />
+                <NativeSelect {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={["Default", ...audioFormats]} />
               )
             }
-            <Button type='submit'>Submit</Button>
+            <TextInput {...form.getInputProps('outputName')}
+              label='Output Name' withAsterisk key={form.key("outputName")} 
+              placeholder='Enter video link here'
+              rightSectionWidth={75}
+            />
             {
-              downloadStatus !== null ? (
-                <Button onClick={() => downloadFile()}>Download</Button>
-              ) : (
-                <Button>Loading...</Button>
+              downloadStatus === null && (
+                <Button bg='red' type='submit'>Submit</Button>
+              )
+            }
+            {
+              downloadStatus === null && apiError !== null && (
+                <Text c='red'>{apiError}</Text>
+              )
+            }
+            {
+              downloadStatus === "pending" && (
+                <>
+                  <Button bg='red' onClick={cancelRequest}>Cancel</Button>
+                  <Center>
+                    <Loader color='red' />
+                  </Center>
+                </>
+              )
+            }
+            {
+              downloadStatus === "success" && (
+                <>
+                  <Button bg='red' type='submit'>Submit</Button>
+                  <Button bg='red' onClick={() => downloadFile()}>Download</Button>
+                </>
               )
             }
           </Flex>
