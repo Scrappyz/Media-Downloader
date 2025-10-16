@@ -320,6 +320,7 @@ function App() {
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     } catch(error: any) {
       setApiError(error.message);
+      setDownloadStatus(null);
     }
   };
 
@@ -327,14 +328,14 @@ function App() {
     <MantineProvider defaultColorScheme="light">
       <Flex pl="10%" pr="10%" h="100vh" direction="column" justify="center" align="center" gap="lg">
         <Title order={2}>Youtube Downloader</Title>
-        <form onSubmit={form.onSubmit((values) => handleSubmit(values))}>
-        {/* <form onSubmit={(e) => {e.preventDefault; alert("submit"); form.onSubmit((values) => handleSubmit(values))}}> */}
+        <form style={{width: 420, maxWidth: "100%"}} onSubmit={form.onSubmit((values) => handleSubmit(values))}>
           <Flex w='100%' direction="column" rowGap="lg">
             <NativeSelect {...form.getInputProps('type')} label='Type' withAsterisk key={form.key("type")} data={mediaTypes} />
-            <Group gap="0" align='flex-end'>
+            <Group w="100%" gap="0" align='flex-end'>
               <TextInput {...form.getInputProps('url')}
                 label='URL' withAsterisk key={form.key("url")} 
                 placeholder='Enter video link here'
+                w="100%"
                 // rightSection={
                 //   <Button type='button' bg='red' radius={2} onClick={handlePaste} h='100%' w='100%' p={0} m={0}>Paste</Button>
                 // }
@@ -343,10 +344,10 @@ function App() {
             </Group>
             {
               isVideo ? (
-                <>
-                  <NativeSelect {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={videoQualities} />
-                  <NativeSelect {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={["Default", ...videoFormats]} />
-                </>
+                <Group justify='space-between'>
+                  <NativeSelect w='45%' {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={videoQualities} />
+                  <NativeSelect w='45%' {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={["Default", ...videoFormats]} />
+                </Group>
               ) : (
                 <NativeSelect {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={["Default", ...audioFormats]} />
               )
@@ -359,11 +360,6 @@ function App() {
             {
               downloadStatus === null && (
                 <Button bg='red' type='submit'>Submit</Button>
-              )
-            }
-            {
-              downloadStatus === null && apiError !== null && (
-                <Text c='red'>{apiError}</Text>
               )
             }
             {
@@ -382,6 +378,11 @@ function App() {
                   <Button bg='red' type='submit'>Submit</Button>
                   <Button type='button' bg='red' onClick={() => downloadFile()}>Download</Button>
                 </>
+              )
+            }
+            {
+              apiError !== null && downloadStatus === null && (
+                <Text c='red'>{apiError}</Text>
               )
             }
           </Flex>
