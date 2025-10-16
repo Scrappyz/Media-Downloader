@@ -182,6 +182,8 @@ public class DownloadHelper {
 
         outputName = getDefaultFilenameOutput(format, outputName, url);
 
+        log.info("[DownloadHelper.download] Got output name '" + outputName + "'");
+
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
         commands.addAll(Arrays.asList("-f", format));
@@ -335,7 +337,7 @@ public class DownloadHelper {
         } else if(type == MediaType.AUDIO_ONLY) {
             if(audioFormat.equals("default")) {
                 if(site == Site.YOUTUBE) {
-                    return "140";
+                    return "bestaudio[ext=m4a]";
                 }
                 return "bestaudio";
             }

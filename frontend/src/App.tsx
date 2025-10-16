@@ -36,6 +36,8 @@ function App() {
   const [requestId, setRequestId] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
+  
+  let isDownloaded: boolean = false; // Prevent pressing of download button multiple times
 
   // console.log("RequestID:", requestId);
 
@@ -141,6 +143,7 @@ function App() {
 
   const handleSubmit = async (values: FormValues): Promise<any> => {
     setDownloadStatus(null);
+    isDownloaded = false;
 
     console.log("Form Values:", values);
     const request = transformRequest(values);
@@ -286,7 +289,7 @@ function App() {
   }
 
   const downloadFile = async () => {
-    if(!requestId) {
+    if(!requestId || isDownloaded) {
       return;
     }
 
@@ -298,6 +301,7 @@ function App() {
     }
 
     try {
+      isDownloaded = true; // Prevent pressing of download button multiple times
       const response = await fetch(url, {
         method: "GET"
       });
@@ -309,7 +313,7 @@ function App() {
 
       const contentDisposition = response.headers.get("Content-Disposition");
       const filename = parseFilenameFromContentDisposition(contentDisposition);
-      console.log("Filename:", filename);
+      // console.log("Filename:", filename);
       const blobUrl = window.URL.createObjectURL(await response.blob());
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -317,10 +321,12 @@ function App() {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      isDownloaded = false;
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     } catch(error: any) {
       setApiError(error.message);
       setDownloadStatus(null);
+      isDownloaded = false;
     }
   };
 
@@ -354,7 +360,7 @@ function App() {
             }
             <TextInput {...form.getInputProps('outputName')}
               label='Output Name' withAsterisk key={form.key("outputName")} 
-              placeholder='Enter video link here'
+              placeholder='Enter the name of the downloaded file'
               rightSectionWidth={75}
             />
             {
@@ -382,7 +388,9 @@ function App() {
             }
             {
               apiError !== null && downloadStatus === null && (
-                <Text c='red'>{apiError}</Text>
+                <Center>
+                  <Text c='red'>{apiError}</Text>
+                </Center>
               )
             }
           </Flex>

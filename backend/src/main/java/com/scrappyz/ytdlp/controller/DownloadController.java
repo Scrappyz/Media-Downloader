@@ -73,7 +73,7 @@ public class DownloadController {
         HttpHeaders headers = new HttpHeaders();
         FileSystemResource resource;
 
-        resource = downloadService.getResource(requestId);
+        resource = downloadService.getResource(requestId, false);
 
         String filename = resource.getFilename();
         int extensionIndex = filename.lastIndexOf('.');
