@@ -90,10 +90,15 @@ function App() {
 
   const getClipboardText = async(): Promise<string> => {
     try {
+      if(!navigator?.clipboard || typeof navigator.clipboard.readText !== "function") {
+        return "";
+      }
+
       const clipText = await navigator.clipboard.readText();
-      return clipText;
+      return String(clipText ?? "");
     } catch(error) {
-      return error;
+      console.error("Clipboard read failed:", error);
+      return "";
     }
   }
 
@@ -160,6 +165,7 @@ function App() {
       return data;
     } catch(error) {
       console.error(error);
+      setApiError(error.message);
       return error;
     }
   }
@@ -321,16 +327,17 @@ function App() {
       <Flex pl="10%" pr="10%" h="100vh" direction="column" justify="center" align="center" gap="lg">
         <Title order={2}>Youtube Downloader</Title>
         <form onSubmit={form.onSubmit((values) => handleSubmit(values))}>
+        {/* <form onSubmit={(e) => {e.preventDefault; alert("submit"); form.onSubmit((values) => handleSubmit(values))}}> */}
           <Flex w='100%' direction="column" rowGap="lg">
             <NativeSelect {...form.getInputProps('type')} label='Type' withAsterisk key={form.key("type")} data={mediaTypes} />
             <Group gap="0" align='flex-end'>
               <TextInput {...form.getInputProps('url')}
                 label='URL' withAsterisk key={form.key("url")} 
                 placeholder='Enter video link here'
-                rightSection={
-                  <Button bg='red' radius={2} onClick={handlePaste} h='100%' w='100%' p={0} m={0}>Paste</Button>
-                }
-                rightSectionWidth={75}
+                // rightSection={
+                //   <Button type='button' bg='red' radius={2} onClick={handlePaste} h='100%' w='100%' p={0} m={0}>Paste</Button>
+                // }
+                // rightSectionWidth={75}
               />
             </Group>
             {
@@ -361,7 +368,7 @@ function App() {
             {
               downloadStatus === "pending" && (
                 <>
-                  <Button bg='red' onClick={cancelRequest}>Cancel</Button>
+                  <Button type='button' bg='red' onClick={cancelRequest}>Cancel</Button>
                   <Center>
                     <Loader color='red' />
                   </Center>
@@ -372,7 +379,7 @@ function App() {
               downloadStatus === "success" && (
                 <>
                   <Button bg='red' type='submit'>Submit</Button>
-                  <Button bg='red' onClick={() => downloadFile()}>Download</Button>
+                  <Button type='button' bg='red' onClick={() => downloadFile()}>Download</Button>
                 </>
               )
             }
