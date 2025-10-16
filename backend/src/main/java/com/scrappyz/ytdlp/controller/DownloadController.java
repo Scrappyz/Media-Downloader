@@ -85,7 +85,10 @@ public class DownloadController {
 
         outputName += extension;
 
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + outputName);
+        String contentAttachment = String.format("attachment; filename=\"%s\"", outputName);
+        log.info("[DownloadController.getResource] Returning content disposition with '" + contentAttachment + "'");
+
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, contentAttachment);
         headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE);
 
         return ResponseEntity.ok().headers(headers).body(resource);
