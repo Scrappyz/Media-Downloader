@@ -294,7 +294,7 @@ function App() {
     const outputName = form.getValues().outputName;
 
     if(outputName !== null && outputName.length > 0) {
-      url += `?output=${outputName}`;
+      url += `?output=${encodeURIComponent(outputName)}`;
     }
 
     try {
@@ -309,6 +309,7 @@ function App() {
 
       const contentDisposition = response.headers.get("Content-Disposition");
       const filename = parseFilenameFromContentDisposition(contentDisposition);
+      console.log("Filename:", filename);
       const blobUrl = window.URL.createObjectURL(await response.blob());
       const a = document.createElement("a");
       a.href = blobUrl;
