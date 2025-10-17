@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Input, Loader, Center } from '@mantine/core';
+import { useEffect, useRef, useState } from 'react';
+import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Loader, Center } from '@mantine/core';
 
 import { api } from './globals';
 import { useForm } from '@mantine/form';
 
 import '@mantine/core/styles.css';
 import { parseFilenameFromContentDisposition } from './utils';
+
+import { color } from './themes';
 
 interface DownloadRequest {
   requestType: string | undefined,
@@ -16,9 +18,9 @@ interface DownloadRequest {
   outputName?: string
 };
 
-interface DownloadResponse {
-  requestId: string
-};
+// interface DownloadResponse {
+//   requestId: string
+// };
 
 interface StatusResponse {
   status: string,
@@ -90,37 +92,6 @@ function App() {
     };
   }, []);
 
-  const getClipboardText = async(): Promise<string> => {
-    try {
-      if(!navigator?.clipboard || typeof navigator.clipboard.readText !== "function") {
-        return "";
-      }
-
-      const clipText = await navigator.clipboard.readText();
-      return String(clipText ?? "");
-    } catch(error) {
-      console.error("Clipboard read failed:", error);
-      return "";
-    }
-  }
-
-  const handleTypeChange = (e) => {
-    const val = e.target.value;
-    form.setFieldValue("type", val);
-  }
-
-  const handleUrlChange = (e) => {
-    const val = e.target.value;
-    form.setFieldValue("url", val);
-  }
-
-  const handlePaste = () => {
-    getClipboardText().then(res => {
-      console.log("Clipboard:", res);
-      form.setFieldValue("url", res);
-    })
-  }
-
   const transformRequest = (values: FormValues): DownloadRequest => {
     const request: DownloadRequest = {
       requestType: mediaTypeMap.get(values.type),
@@ -166,7 +137,7 @@ function App() {
       setRequestId(data.requestId);
       setIsPolling(true);
       return data;
-    } catch(error) {
+    } catch(error: any) {
       console.error(error);
       setApiError(error.message);
       return error;
@@ -317,6 +288,11 @@ function App() {
       const blobUrl = window.URL.createObjectURL(await response.blob());
       const a = document.createElement("a");
       a.href = blobUrl;
+
+      if(!filename) {
+        throw new Error("No file returned");
+      }
+
       a.download = filename;
       document.body.appendChild(a);
       a.click();
@@ -342,10 +318,10 @@ function App() {
                 label='URL' withAsterisk key={form.key("url")} 
                 placeholder='Enter video link here'
                 w="100%"
-                // rightSection={
-                //   <Button type='button' bg='red' radius={2} onClick={handlePaste} h='100%' w='100%' p={0} m={0}>Paste</Button>
-                // }
-                // rightSectionWidth={75}
+                rightSection={
+                  <Button type='button' bg={color.light[0]} radius={2} onClick={() => form.setFieldValue("url", "")} h='100%' w='100%' p={0} m={0}>Clear</Button>
+                }
+                rightSectionWidth={75}
               />
             </Group>
             {
@@ -365,15 +341,15 @@ function App() {
             />
             {
               downloadStatus === null && (
-                <Button bg='red' type='submit'>Submit</Button>
+                <Button bg={color.light[0]} type='submit'>Submit</Button>
               )
             }
             {
               downloadStatus === "pending" && (
                 <>
-                  <Button type='button' bg='red' onClick={cancelRequest}>Cancel</Button>
+                  <Button type='button' bg={color.light[0]} onClick={cancelRequest}>Cancel</Button>
                   <Center>
-                    <Loader color='red' />
+                    <Loader color={color.light[0]} />
                   </Center>
                 </>
               )
@@ -381,15 +357,15 @@ function App() {
             {
               downloadStatus === "success" && (
                 <>
-                  <Button bg='red' type='submit'>Submit</Button>
-                  <Button type='button' bg='red' onClick={() => downloadFile()}>Download</Button>
+                  <Button bg={color.light[0]} type='submit'>Submit</Button>
+                  <Button type='button' bg={color.light[0]} onClick={() => downloadFile()}>Download</Button>
                 </>
               )
             }
             {
               apiError !== null && downloadStatus === null && (
                 <Center>
-                  <Text c='red'>{apiError}</Text>
+                  <Text c={color.light[0]}>{apiError}</Text>
                 </Center>
               )
             }
