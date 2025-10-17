@@ -11,7 +11,7 @@ export function parseFilenameFromContentDisposition(header?: string | null): str
     if (parts.length === 2) {
       try {
         // parts[0] might be "UTF-8" or "utf-8"
-        const charset = parts[0].toLowerCase(); // note: we don't use it for decoding in browser (decodeURIComponent assumes UTF-8)
+        // const charset = parts[0].toLowerCase(); // note: we don't use it for decoding in browser (decodeURIComponent assumes UTF-8)
         const encoded = parts[1];
         // decode percent-encoding (assumes UTF-8 per modern servers; if charset != utf-8, decodeURIComponent may mis-decode)
         return decodeURIComponent(encoded);

@@ -231,10 +231,10 @@ function App() {
     setDownloadStatus(null);
   }
 
-  const stopPolling = () => {
-    setIsPolling(false);
-    currentAbort.current?.abort();
-  };
+  // const stopPolling = () => {
+  //   setIsPolling(false);
+  //   currentAbort.current?.abort();
+  // };
 
   const cancelRequest = async () => {
     try {
