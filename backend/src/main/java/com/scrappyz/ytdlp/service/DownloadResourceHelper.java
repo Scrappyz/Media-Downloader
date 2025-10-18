@@ -33,24 +33,30 @@ public class DownloadResourceHelper {
     public CompletableFuture<Boolean> cleanup(String id, String resourceName, ConcurrentHashMap<String, CompletableFuture<DownloadResult>> processes, 
         Set<String> cancelled, ConcurrentHashMap<String, String> resourceMap) { // Delete downloaded resource after a certain time. Also cleanup
         
-        try {
-            Thread.sleep(resourceExpiryTime);
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
+        boolean isCancelled = cancelled.contains(id);
+        boolean isProcess = processes.containsKey(id);
+        boolean isResourceMapped = resourceMap.containsKey(id);
 
-        if(processes.containsKey(id)) {
-            log.info("[DownloadResourceHelper.cleanup] Process ID " + id + " expired");
-            processes.remove(id);
-        }
-
-        if(cancelled.contains(id)) {
-            log.info("[DownloadResourceHelper.cleanup] Cancel ID " + id + " expired");
+        if(!isCancelled) {
+            log.info("[DownloadResourceHelper.cleanup] Cleanup in " + Long.toString(resourceExpiryTime) + " ms");
+            try {
+                Thread.sleep(resourceExpiryTime);
+            } catch(InterruptedException e) {
+                e.printStackTrace();
+            }
+        } else {
+            log.info("[DownloadResourceHelper.cleanup] Request with ID '" + id + "' was cancelled");
+            log.info("[DownloadResourceHelper.cleanup] Cancel ID '" + id + "' expired");
             cancelled.remove(id);
         }
 
-        if(resourceMap.containsKey(id)) {
-            log.info("[DownloadResourceHelper.cleanup] Resource ID " + id + " expired");
+        if(isProcess) {
+            log.info("[DownloadResourceHelper.cleanup] Process ID '" + id + "' expired");
+            processes.remove(id);
+        }
+
+        if(isResourceMapped) {
+            log.info("[DownloadResourceHelper.cleanup] Resource ID '" + id + "' expired");
             resourceMap.remove(id);
         }
 

@@ -47,7 +47,7 @@ function App() {
   const videoQualities: string[] = ["144p", "240p", "360p", "480p", "720p", "1080p", "2160p"];
   const videoFormats: string[] = ["mp4", "mkv"];
   const audioFormats: string[] = ["mp3", "m4a", "wav", "flac"];
-  const pollInterval: number = 5000;
+  const pollInterval: number = 2000;
 
   const mediaTypeMap = new Map<string, string>([
     ["Video", "video"],

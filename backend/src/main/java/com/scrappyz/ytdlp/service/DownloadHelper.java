@@ -180,15 +180,13 @@ public class DownloadHelper {
         String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audFormat);
         log.info("[DownloadHelper.download] Command Format: " + format);
 
-        outputName = getDefaultFilenameOutput(format, outputName, url);
-
         log.info("[DownloadHelper.download] Got output name '" + outputName + "'");
 
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
         commands.addAll(Arrays.asList("-f", format));
         commands.addAll(Arrays.asList(url, "-P", paths.getDownloadPath().toString()));
-        commands.addAll(Arrays.asList("-o", outputName));
+        commands.addAll(Arrays.asList("-o", outputName + ".%(ext)s", "--no-warnings", "--no-progress"));
 
         log.info("[DownloadHelper.download] Download Commands: " + String.join(" ", commands));
 
@@ -201,11 +199,37 @@ public class DownloadHelper {
             throw new DownloadFailedException();
         }
 
+        List<String> successOutput = processResult.getOutput();
+        List<String> errorOutput = processResult.getErrorOutput();
+        ErrorCode error = null;
+
+        if(!errorOutput.isEmpty()) {
+            error = parseError(errorOutput.get(errorOutput.size() - 1));
+        }
+
+        if(error == ErrorCode.INVALID_URL) {
+            log.info("[DownloadHelper.download] Invalid URL");
+            throw new InvalidUrlException("The URL '" + url + "' is invalid");
+        }
+
+        if(error == ErrorCode.UNSUPPORTED_URL) {
+            log.info("[DownloadHelper.download] Unsupported URL");
+            throw new UnsupportedUrlException("The URL '" + url + "'' is unsupported");
+        }
+
+        if(error == ErrorCode.FORMAT_UNAVAILABLE) {
+            log.info("[DownloadHelper.download] Format unavailable");
+            throw new FormatUnavailableException("The requested format is unavailable");
+        }
+
+        outputName = parseFilenameFromOutputStream(successOutput);
+        log.info("[DownloadHelper.download] Output filename is '" + outputName + "'");
+
         result.setStatus(RequestStatus.SUCCESS.getString());
         result.setMessage("Download has finished");
         resourceMap.put(id, outputName);
 
-        resourceHelper.cleanup(id, outputName, processes, cancelled, resourceMap); // Remove in set time (ms)
+        resourceHelper.cleanup(id, outputName, processes, cancelled, resourceMap); // Cleanup resources in set time
 
         log.info("[DownloadHelper.download] Download with ID " + id + " has finished");
         
@@ -308,7 +332,7 @@ public class DownloadHelper {
     }
 
     public static String resolveVideoFormat(String videoFormat) {
-        if(videoFormat == null || videoFormat.isEmpty()) {
+        if(videoFormat == null || videoFormat.isEmpty() || videoFormat.equals("Default")) {
             return "default";
         }
 
@@ -316,7 +340,7 @@ public class DownloadHelper {
     }
 
     public static String resolveAudioFormat(String audioFormat) {
-        if(audioFormat == null || audioFormat.isEmpty()) {
+        if(audioFormat == null || audioFormat.isEmpty() || audioFormat.equals("Default")) {
             return "default";
         }
 
@@ -374,6 +398,37 @@ public class DownloadHelper {
         }
 
         return null;
+    }
+
+    private String parseFilenameFromOutputStream(List<String> output) {
+        if(output.isEmpty()) {
+            return null;
+        }
+
+        String temp = "";
+        int i = output.size() - 1;
+        while(i >= 0) {
+            temp = output.get(i);
+
+            if(temp.startsWith("[download] Destination:")) {
+                break;
+            }
+
+            i--;
+        }
+
+        if(i < 0) {
+            return null;
+        }
+
+        int startIndex = temp.lastIndexOf('\\');
+
+        if(startIndex < 0) {
+            startIndex = temp.lastIndexOf('/');
+        }
+
+        String filename = temp.substring(startIndex + 1);
+        return filename;
     }
     // ---HELPER METHODS---
 
