@@ -336,10 +336,7 @@ public class DownloadHelper {
             return String.format("bestvideo[ext=%s][height<=%d]", videoFormat, videoQuality, videoQuality);
         } else if(type == MediaType.AUDIO_ONLY) {
             if(audioFormat.equals("default")) {
-                if(site == Site.YOUTUBE) {
-                    return "bestaudio[ext=m4a]";
-                }
-                return "bestaudio";
+                return "bestaudio[ext=mp3]/bestaudio[ext=m4a]/bestaudio";
             }
 
             return String.format("bestaudio[ext=%s]", audioFormat);

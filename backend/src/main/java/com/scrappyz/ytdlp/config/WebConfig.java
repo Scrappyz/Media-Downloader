@@ -10,7 +10,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**") // Apply to all paths under
-                .allowedOriginPatterns("http://*:5000") // Specific origins
+                .allowedOriginPatterns("http://*:5000", "https://downloader.micoapp.org") // Specific origins
+                // .allowedOrigins("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE") // Allowed HTTP methods
                 .allowedHeaders("*") // Allowed headers
                 .allowCredentials(true) // Allow sending cookies/authentication headers

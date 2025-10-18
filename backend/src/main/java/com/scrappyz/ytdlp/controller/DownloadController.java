@@ -40,7 +40,7 @@ public class DownloadController {
     @GetMapping("/hello")
     public ResponseEntity<String> hello() {
         // log.info(paths.getExecutablePath().toString());
-        return ResponseEntity.ok().body(paths.getDownloadPath().toString());
+        return ResponseEntity.ok().body("fudge");
     }
     
     @PostMapping
