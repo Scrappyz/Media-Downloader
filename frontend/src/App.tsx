@@ -38,8 +38,8 @@ function App() {
   const [requestId, setRequestId] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
-  
-  let isDownloaded: boolean = false; // Prevent pressing of download button multiple times
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
 
   // console.log("RequestID:", requestId);
 
@@ -113,8 +113,13 @@ function App() {
   }
 
   const handleSubmit = async (values: FormValues): Promise<any> => {
+    if(isSubmitted) {
+      return;
+    }
+
     setDownloadStatus(null);
-    isDownloaded = false;
+    setIsDownloaded(false);
+    setIsSubmitted(true);
 
     console.log("Form Values:", values);
     const request = transformRequest(values);
@@ -141,6 +146,8 @@ function App() {
       console.error(error);
       setApiError(error.message);
       return error;
+    } finally {
+      setIsSubmitted(false);
     }
   }
 
@@ -271,8 +278,9 @@ function App() {
       url += `?output=${encodeURIComponent(outputName)}`;
     }
 
+    setIsDownloaded(true); // Prevent pressing of download button multiple times
+
     try {
-      isDownloaded = true; // Prevent pressing of download button multiple times
       const response = await fetch(url, {
         method: "GET"
       });
@@ -297,12 +305,12 @@ function App() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      isDownloaded = false;
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     } catch(error: any) {
       setApiError(error.message);
       setDownloadStatus(null);
-      isDownloaded = false;
+    } finally {
+      setIsDownloaded(false);
     }
   };
 
@@ -341,7 +349,7 @@ function App() {
             />
             {
               downloadStatus === null && (
-                <Button bg={color.light[0]} type='submit'>Submit</Button>
+                <Button bg={color.light[0]} type='submit' disabled={isSubmitted}>Submit</Button>
               )
             }
             {
@@ -358,7 +366,7 @@ function App() {
               downloadStatus === "success" && (
                 <>
                   <Button bg={color.light[0]} type='submit'>Submit</Button>
-                  <Button type='button' bg={color.light[0]} onClick={() => downloadFile()}>Download</Button>
+                  <Button type='button' disabled={isDownloaded} bg={color.light[0]} onClick={() => downloadFile()}>Download</Button>
                 </>
               )
             }
