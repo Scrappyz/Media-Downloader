@@ -335,9 +335,9 @@ function App() {
               )
             }
             <TextInput {...form.getInputProps('outputName')}
-              label='Output Name' withAsterisk key={form.key("outputName")} 
+              label='Output Name'
+              key={form.key("outputName")} 
               placeholder='Enter the name of the downloaded file'
-              rightSectionWidth={75}
             />
             {
               downloadStatus === null && (
