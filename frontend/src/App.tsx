@@ -40,6 +40,7 @@ function App() {
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
 
   // console.log("RequestID:", requestId);
 
@@ -60,7 +61,7 @@ function App() {
     initialValues: {
       type: "Video",
       url: "",
-      videoQuality: "480p",
+      videoQuality: "720p",
       videoFormat: "Default",
       audioFormat: "Default",
       outputName: ""
@@ -146,14 +147,14 @@ function App() {
         setDownloadStatus(body.status);        
 
         if(body.status === "success") {
-          setIsSubmitted(false);
-          setIsPolling(false);
+          setIsSubmitted(false); // Show submit button again
+          setIsPolling(false); // Stop polling
           return;
         }
 
         // schedule next poll
         timer = setTimeout(() => {
-          if (!stopped) {
+          if(!stopped) {
             pollStatus()
           };
         }, pollInterval);
@@ -172,6 +173,7 @@ function App() {
         setApiError(error?.message ?? "Polling error");
 
         setDownloadStatus(null);
+        setIsSubmitted(false);
 
         timer = setTimeout(() => {
           if (!stopped) {
@@ -187,7 +189,7 @@ function App() {
 
     return () => {
       stopped = true;
-      if (timer !== null) window.clearTimeout(timer);
+      if(timer !== null) window.clearTimeout(timer);
       currentAbort.current?.abort();
     };
 
@@ -200,12 +202,8 @@ function App() {
     setDownloadStatus(null);
     setIsDownloaded(false);
     setIsSubmitted(false);
+    setIsCancelled(false);
   }
-
-  // const stopPolling = () => {
-  //   setIsPolling(false);
-  //   currentAbort.current?.abort();
-  // };
 
   const handleSubmit = async (values: FormValues): Promise<any> => {
     if(isSubmitted) {
@@ -215,6 +213,7 @@ function App() {
     setDownloadStatus(null);
     setIsDownloaded(false);
     setIsSubmitted(true);
+    setApiError(null);
 
     console.log("Form Values:", values);
     const request = transformRequest(values);
@@ -245,6 +244,7 @@ function App() {
   }
 
   const cancelRequest = async () => {
+    setIsCancelled(true);
     try {
       const response = await fetch(api + `/downloads/${requestId}`, {
         method: "DELETE",
@@ -354,9 +354,9 @@ function App() {
               )
             }
             {
-              (isSubmitted || downloadStatus === "pending") && (
+              (isSubmitted) && (
                 <>
-                  <Button type='button' bg={color.light[0]} onClick={cancelRequest}>Cancel</Button>
+                  <Button type='button' bg={color.light[0]} disabled={isCancelled} onClick={cancelRequest}>Cancel</Button>
                   <Center>
                     <Loader color={color.light[0]} />
                   </Center>
@@ -369,7 +369,7 @@ function App() {
               )
             }
             {
-              apiError !== null && downloadStatus === null && (
+              apiError !== null && !isSubmitted && (
                 <Center>
                   <Text c={color.light[0]}>{apiError}</Text>
                 </Center>

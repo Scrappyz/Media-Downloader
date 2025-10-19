@@ -91,7 +91,9 @@ public class DownloadHelper {
     };
 
     public enum Site {
-        YOUTUBE("youtube");
+        YOUTUBE("youtube"),
+        FACEBOOK("facebook"),
+        INSTAGRAM("instagram");
 
         private final String string;
         private static final HashMap<String, Site> byString = new HashMap<>();
@@ -282,11 +284,17 @@ public class DownloadHelper {
 
     private String resolveCommandFormat(MediaType type, Site site, String videoFormat, int videoQuality, String audioFormat) {
         if(type == MediaType.VIDEO) {
+            if(site == Site.FACEBOOK || site == Site.INSTAGRAM) {
+                return "best";
+            }
             if(videoFormat.equals("default")) {
                 return String.format("best[height<=%d]", videoQuality);
             }
             return String.format("best[ext=%s][height<=%d]", videoFormat, videoQuality, videoQuality);
         } else if(type == MediaType.VIDEO_ONLY) {
+            if(site == Site.FACEBOOK) {
+                return "bestvideo";
+            }
             if(videoFormat.equals("default")) {
                 return String.format("bestvideo[height<=%d]", videoQuality);
             }
@@ -295,7 +303,6 @@ public class DownloadHelper {
             if(audioFormat.equals("default")) {
                 return "bestaudio[ext=mp3]/bestaudio[ext=m4a]/bestaudio";
             }
-
             return String.format("bestaudio[ext=%s]", audioFormat);
         }
 
@@ -321,7 +328,9 @@ public class DownloadHelper {
     private Site parseSite(String url) {
         Map<String, Site> siteMap = Map.ofEntries(
             Map.entry("youtube.com", Site.YOUTUBE),
-            Map.entry("youtu.be", Site.YOUTUBE)
+            Map.entry("youtu.be", Site.YOUTUBE),
+            Map.entry("facebook.com", Site.FACEBOOK),
+            Map.entry("instagram.com", Site.INSTAGRAM)
         );
 
         for (Map.Entry<String, Site> entry : siteMap.entrySet()) {
