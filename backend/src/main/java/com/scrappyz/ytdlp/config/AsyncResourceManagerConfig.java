@@ -19,7 +19,7 @@ public class AsyncResourceManagerConfig {
         @Value("${resource.queue.capacity:50}") int queueCap) {
 
         ThreadPoolTaskExecutor ex = new ThreadPoolTaskExecutor();
-        ex.setThreadNamePrefix("download-");
+        ex.setThreadNamePrefix("resource-");
         ex.setCorePoolSize(core);
         ex.setMaxPoolSize(max);
         ex.setQueueCapacity(queueCap);
