@@ -93,7 +93,8 @@ public class DownloadHelper {
     public enum Site {
         YOUTUBE("youtube"),
         FACEBOOK("facebook"),
-        INSTAGRAM("instagram");
+        INSTAGRAM("instagram"),
+        UNKNOWN("unknown");
 
         private final String string;
         private static final HashMap<String, Site> byString = new HashMap<>();
@@ -283,30 +284,39 @@ public class DownloadHelper {
     }
 
     private String resolveCommandFormat(MediaType type, Site site, String videoFormat, int videoQuality, String audioFormat) {
-        if(type == MediaType.VIDEO) {
-            if(site == Site.FACEBOOK || site == Site.INSTAGRAM) {
-                return "best";
-            }
-            if(videoFormat.equals("default")) {
-                return String.format("best[height<=%d]", videoQuality);
-            }
-            return String.format("best[ext=%s][height<=%d]", videoFormat, videoQuality, videoQuality);
-        } else if(type == MediaType.VIDEO_ONLY) {
-            if(site == Site.FACEBOOK) {
-                return "bestvideo";
-            }
-            if(videoFormat.equals("default")) {
-                return String.format("bestvideo[height<=%d]", videoQuality);
-            }
-            return String.format("bestvideo[ext=%s][height<=%d]", videoFormat, videoQuality, videoQuality);
-        } else if(type == MediaType.AUDIO_ONLY) {
-            if(audioFormat.equals("default")) {
-                return "bestaudio[ext=mp3]/bestaudio[ext=m4a]/bestaudio";
-            }
-            return String.format("bestaudio[ext=%s]", audioFormat);
+        
+        boolean isVideo = (type == MediaType.VIDEO || type == MediaType.VIDEO_ONLY);
+        String formatType = "best";
+
+        if(type == MediaType.VIDEO_ONLY) {
+            formatType += "video";
         }
 
-        return "best";
+        if(type == MediaType.AUDIO_ONLY) {
+            formatType = "bestaudio";
+        }
+
+        String format = formatType;
+
+        if(isVideo) {
+            format += String.format("[height<=%d]", videoQuality);
+
+            if(!videoFormat.equals("default")) {
+                format += String.format("[ext=%s]", videoFormat);
+            }
+        } else {
+            if(audioFormat.equals("default")) {
+                format = "bestaudio[ext=flac]/bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio";
+            } else {
+                format += String.format("[ext=%s]", audioFormat);
+            }
+        }
+
+        if(isVideo && site != Site.YOUTUBE) {
+            format += "/" + formatType;
+        }
+
+        return format;
     }
 
     private ErrorCode parseError(String error) {
@@ -339,7 +349,7 @@ public class DownloadHelper {
             }
         }
 
-        return null;
+        return Site.UNKNOWN;
     }
 
     private String parseFilenameFromOutputStream(List<String> output) {

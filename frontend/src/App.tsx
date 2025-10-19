@@ -93,6 +93,17 @@ function App() {
     };
   }, []);
 
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      console.log('Clipboard content:', text);
+      form.setFieldValue("url", text);
+    } catch (err: any) {
+      console.error('Failed to read clipboard contents:', err);
+      return null; 
+    }
+  }
+
   const transformRequest = (values: FormValues): DownloadRequest => {
     const request: DownloadRequest = {
       requestType: mediaTypeMap.get(values.type),
@@ -318,7 +329,7 @@ function App() {
   return (
     <MantineProvider defaultColorScheme="light">
       <Flex pl="10%" pr="10%" h="100vh" direction="column" justify="center" align="center" gap="lg">
-        <Title order={2}>Youtube Downloader</Title>
+        <Title order={2}>Media Downloader</Title>
         <form style={{width: 420, maxWidth: "100%"}} onSubmit={form.onSubmit((values) => handleSubmit(values))}>
           <Flex w='100%' direction="column" rowGap="lg">
             <NativeSelect {...form.getInputProps('type')} label='Type' withAsterisk key={form.key("type")} data={mediaTypes} />
@@ -328,7 +339,7 @@ function App() {
                 placeholder='Enter video link here'
                 w="100%"
                 rightSection={
-                  <Button type='button' bg={color.light[0]} radius={2} onClick={() => form.setFieldValue("url", "")} h='100%' w='100%' p={0} m={0}>Clear</Button>
+                  <Button type='button' bg={color.light[0]} radius={2} onClick={handlePaste} h='100%' w='100%' p={0} m={0}>Paste</Button>
                 }
                 rightSectionWidth={75}
               />
@@ -350,7 +361,7 @@ function App() {
             />
             {
               !isSubmitted && (
-                <Button bg={color.light[0]} type='submit'>Submit</Button>
+                <Button bg={color.light[0]} type='submit'>Fetch</Button>
               )
             }
             {
