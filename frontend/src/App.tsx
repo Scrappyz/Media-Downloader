@@ -112,45 +112,6 @@ function App() {
     return request;
   }
 
-  const handleSubmit = async (values: FormValues): Promise<any> => {
-    if(isSubmitted) {
-      return;
-    }
-
-    setDownloadStatus(null);
-    setIsDownloaded(false);
-    setIsSubmitted(true);
-
-    console.log("Form Values:", values);
-    const request = transformRequest(values);
-    console.log("Request Data:", request);
-
-    try {
-      const response = await fetch(api + "/downloads", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(request)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setRequestId(data.requestId);
-      setIsPolling(true);
-      return data;
-    } catch(error: any) {
-      console.error(error);
-      setApiError(error.message);
-      return error;
-    } finally {
-      setIsSubmitted(false);
-    }
-  }
-
   useEffect(() => {
 
     if(!requestId || !isPolling) {
@@ -182,9 +143,10 @@ function App() {
 
         if(!mounted.current) return;
 
-        setDownloadStatus(body.status);
+        setDownloadStatus(body.status);        
 
         if(body.status === "success") {
+          setIsSubmitted(false);
           setIsPolling(false);
           return;
         }
@@ -236,12 +198,51 @@ function App() {
     setRequestId(null);
     setIsPolling(false);
     setDownloadStatus(null);
+    setIsDownloaded(false);
+    setIsSubmitted(false);
   }
 
   // const stopPolling = () => {
   //   setIsPolling(false);
   //   currentAbort.current?.abort();
   // };
+
+  const handleSubmit = async (values: FormValues): Promise<any> => {
+    if(isSubmitted) {
+      return;
+    }
+
+    setDownloadStatus(null);
+    setIsDownloaded(false);
+    setIsSubmitted(true);
+
+    console.log("Form Values:", values);
+    const request = transformRequest(values);
+    console.log("Request Data:", request);
+
+    try {
+      const response = await fetch(api + "/downloads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request)
+      });
+
+      if(!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setRequestId(data.requestId);
+      setIsPolling(true);
+      return data;
+    } catch(error: any) {
+      console.error(error);
+      setApiError(error.message);
+      return error;
+    }
+  }
 
   const cancelRequest = async () => {
     try {
@@ -348,12 +349,12 @@ function App() {
               placeholder='Enter the name of the downloaded file'
             />
             {
-              downloadStatus === null && (
-                <Button bg={color.light[0]} type='submit' disabled={isSubmitted}>Submit</Button>
+              !isSubmitted && (
+                <Button bg={color.light[0]} type='submit'>Submit</Button>
               )
             }
             {
-              downloadStatus === "pending" && (
+              (isSubmitted || downloadStatus === "pending") && (
                 <>
                   <Button type='button' bg={color.light[0]} onClick={cancelRequest}>Cancel</Button>
                   <Center>
@@ -364,10 +365,7 @@ function App() {
             }
             {
               downloadStatus === "success" && (
-                <>
-                  <Button bg={color.light[0]} type='submit'>Submit</Button>
-                  <Button type='button' disabled={isDownloaded} bg={color.light[0]} onClick={() => downloadFile()}>Download</Button>
-                </>
+                <Button type='button' disabled={isDownloaded} bg={color.light[0]} onClick={() => downloadFile()}>Download</Button>
               )
             }
             {

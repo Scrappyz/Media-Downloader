@@ -1,9 +1,13 @@
 package com.scrappyz.ytdlp.listener;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -28,6 +32,23 @@ public class YtdlpUpdateOnStartup implements ApplicationListener<ApplicationRead
 
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
+        boolean isEmpty = false;
+
+        try(DirectoryStream<Path> dirStream = Files.newDirectoryStream(paths.getDownloadPath())) {
+            isEmpty = !dirStream.iterator().hasNext();
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+
+        if(!isEmpty) {
+            log.info("[YtdlpUpdateOnStartup.onApplicationEvent] Emptying download directory contents on startup");
+            try {
+                FileUtils.deleteDirectory(paths.getDownloadPath().toFile());
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         if(!ytdlpConfig.isAutoUpdate()) {
             return;
         }
