@@ -11,5 +11,7 @@ public class DownloadRequest {
     private String videoFormat;
     private int videoQuality;
     private String audioFormat;
+    private String id;
+    private String mediaId;
 
 }

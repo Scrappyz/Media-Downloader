@@ -5,10 +5,18 @@ import react from '@vitejs/plugin-react-swc'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: "0.0.0.0",
-    port: 5000,
-    allowedHosts: [
-      '.micoapp.org', // Allows example.com and all its subdomains
-    ]
+    hmr: false,
+    port: 3000,
+    allowedHosts: true,
+    proxy: {
+      '/api/v1/ws': {
+        target: "http://localhost:8080/",
+        ws: true
+      },
+      '/api/v1': {
+        target: "http://localhost:8080/",
+        changeOrigin: true
+      }
+    }
   }
 })

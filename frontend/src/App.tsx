@@ -1,13 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
-import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Loader, Center } from '@mantine/core';
+import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Loader, Center, Progress } from '@mantine/core';
 
-import { api } from './globals';
 import { useForm } from '@mantine/form';
 
 import '@mantine/core/styles.css';
 import { parseFilenameFromContentDisposition } from './utils';
 
 import { color } from './themes';
+
+import SockJs from "sockjs-client";
+import { Client } from '@stomp/stompjs';
+import { v4 as uuidv4 } from "uuid";
+import axios from "axios";
+import eruda from "eruda";
+
+const address: string = window.location.protocol + "//" + window.location.hostname;
+let api: string = address;
+
+if (window.location.hostname.indexOf("localhost") > -1 || window.location.hostname.indexOf("192.168.") > -1) {
+  api += ":3000";
+}
+api += "/api/v1";
+
+eruda.init();
 
 interface DownloadRequest {
   requestType: string | undefined,
@@ -36,11 +51,12 @@ function App() {
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
-  const [isPolling, setIsPolling] = useState(false);
+  // const [isPolling, setIsPolling] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [ext, setExt] = useState("");
 
   // console.log("RequestID:", requestId);
 
@@ -48,7 +64,7 @@ function App() {
   const videoQualities: string[] = ["144p", "240p", "360p", "480p", "720p", "1080p", "2160p"];
   const videoFormats: string[] = ["mp4", "mkv"];
   const audioFormats: string[] = ["mp3", "m4a", "wav", "flac"];
-  const pollInterval: number = 2000;
+  // const pollInterval: number = 2000;
 
   const mediaTypeMap = new Map<string, string>([
     ["Video", "video"],
@@ -92,6 +108,44 @@ function App() {
       currentAbort.current?.abort();
     };
   }, []);
+  
+  const [chunkSizeBytes, setChunkSizeBytes] = useState(1024);
+  let [percentage, setPercentage] = useState(0.0);
+  let [chunkFile, setChunkFile] = useState(new Uint8Array());
+  let [pBytes, setPBytes] = useState(0.0);
+  let [socket, setSocket] = useState(new SockJs(api + "/ws"));
+  let [stompClient, setStompClient] = useState(null);
+  let [myId, setMyId] = useState(uuidv4());
+  let [videoId, setVideoId] = useState(uuidv4());
+  let [videoName, setVideoName] = useState("");
+
+  useEffect(function() {
+    //stompClient.activate();
+    var a = 0;
+    var imgLink = "https://www.google.com/images/phd/px.gif";
+    var img = new Image();
+    var chunkSizeBytesTemp = 0;
+    function testLatency(num) {
+      if (num < 10) {
+        var tStart = new Date().getTime();
+        img.src = imgLink + "?t=" + tStart;
+        img.onload = function () {
+          var tEnd = new Date().getTime();
+          var tTimeTook = tEnd - tStart;
+          a += tTimeTook;
+          testLatency(num + 1);
+        }
+        //alert();
+      } else {
+        var avg = a / 10;
+        //alert(avg);
+        chunkSizeBytesTemp = Math.ceil(16384 / (1 + (avg / 200) ** 2));
+        setChunkSizeBytes(chunkSizeBytesTemp);
+        //alert(chunkSizeBytesTemp);
+      }
+    }
+    testLatency(0);
+  }, []);
 
   const handlePaste = async () => {
     try {
@@ -124,92 +178,11 @@ function App() {
     return request;
   }
 
-  useEffect(() => {
-
-    if(!requestId || !isPolling) {
-      return;
-    }
-
-    let timer: number | null = null;
-    let stopped = false;
-
-    const pollStatus = async () => {
-      // abort previous
-      currentAbort.current?.abort();
-      const ac = new AbortController();
-      currentAbort.current = ac;
-
-      try {
-        const res = await fetch(api + `/downloads/${encodeURIComponent(requestId)}`, {
-          method: "GET",
-          headers: { "Accept": "application/json" },
-          signal: ac.signal,
-        });
-
-        if(!res.ok) { // If it is not ok, stop polling
-          const response: ApiError = await res.json();
-          throw new Error(response.message);
-        }
-
-        const body: StatusResponse = await res.json();
-
-        if(!mounted.current) return;
-
-        setDownloadStatus(body.status);        
-
-        if(body.status === "success") {
-          setIsSubmitted(false); // Show submit button again
-          setIsPolling(false); // Stop polling
-          return;
-        }
-
-        // schedule next poll
-        timer = setTimeout(() => {
-          if(!stopped) {
-            pollStatus()
-          };
-        }, pollInterval);
-
-      } catch(error: any) {
-
-        if(error.name === "AbortError") {
-          return;
-        }
-
-        setIsPolling(false);
-
-        // network or server error — show and retry after interval
-        if(!mounted.current) return;
-
-        setApiError(error?.message ?? "Polling error");
-
-        setDownloadStatus(null);
-        setIsSubmitted(false);
-
-        timer = setTimeout(() => {
-          if (!stopped) {
-            pollStatus()
-          };
-        }, pollInterval);
-
-      }
-    };
-
-    // initial immediate poll
-    pollStatus();
-
-    return () => {
-      stopped = true;
-      if(timer !== null) window.clearTimeout(timer);
-      currentAbort.current?.abort();
-    };
-
-  }, [requestId, isPolling]);
 
   const reset = () => {
     setApiError(null);
     setRequestId(null);
-    setIsPolling(false);
+    // setIsPolling(false);
     setDownloadStatus(null);
     setIsDownloaded(false);
     setIsSubmitted(false);
@@ -221,37 +194,143 @@ function App() {
       return;
     }
 
+    // let u: any = uuidv4();
+
+    // setVideoId(u);
+
     setDownloadStatus(null);
     setIsDownloaded(false);
     setIsSubmitted(true);
     setApiError(null);
+    setPercentage(0);
+    setPBytes(0);
+
+    let vidName: any = values.outputName;
+
+    if (vidName == "") {
+      vidName = videoId;
+    }
+
+    setVideoName(vidName);
 
     console.log("Form Values:", values);
     const request = transformRequest(values);
     console.log("Request Data:", request);
 
-    try {
-      const response = await fetch(api + "/downloads", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(request)
-      });
+    request.id = myId;
+    request.mediaId = videoId;
+    console.log(socket);
+    let sjs: any = new SockJs(api + "/ws");
+    let sc: any = new Client({
+      webSocketFactory: () => sjs,
+      debug: (str) => console.log(str),
+      onConnect: async () => {
+        console.log("Connected!");
 
-      if(!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
+        let pp = 0;
+        let u8array;
+        let u8arraySize;
+        let u8arrayCurrentSize;
+
+        let sub = sc.subscribe("/topic/" + myId, async function (msg) {
+          //console.log(msg.body);
+          var l = msg.body.split(" ");
+          if (l[0] == "Percent:") {
+            //console.log(parseFloat(l[1]));
+            var p = parseFloat(l[1]);
+            if (pp < 10 && p > 50) {
+              //alert();
+              return;
+            } else if(p > pp){
+              //setPercentage(p);
+              pp = p;
+            }
+            setPercentage(pp);
+            //document.getElementById("percent").innerText = pp;
+          } else if (l[0] == "Url:") {
+            //alert(l[1])
+            var str = l[1];
+            var i = str.length - 1;
+            var ext = "";
+            while (i > -1 && str[i] != '.') {
+              ext = str[i] + ext;
+              i--;
+            }
+            //alert(ext);
+            setExt(ext);
+          }else if (l[0] == "Done") {
+            //alert();
+            pp = 0;
+            //alert(videoId);
+            //alert(chunkSizeBytes);
+            //setDownloadStatus("success");
+            //setIsSubmitted(false);
+            sc.publish({
+              destination: "/app/wschunk",
+              body: JSON.stringify({
+                id: myId,
+                mediaId: videoId,
+                chunkSize: chunkSizeBytes,
+                message: "Download"
+              })
+            });
+          } else if (l[0] == "Data") {
+            var index = parseInt(l[1]);
+            var bytesRead = parseInt(l[2]);
+            var binSize = parseInt(l[3]);
+            var payload = l[4];
+            var bPayload = atob(payload);
+            //console.log(bPayload.length);
+
+            //alert(bytesRead);
+            if (index == 0) {
+              u8array = new Uint8Array(binSize);
+              u8arrayCurrentSize = 0;
+              u8arraySize = binSize;
+            }
+            var start = index * chunkSizeBytes;
+            for (var i = 0; i < bytesRead; i++) {
+              u8array[start + i] = bPayload.charCodeAt(i);
+            }
+
+
+            u8arrayCurrentSize += bytesRead;
+            setPBytes(u8arrayCurrentSize / u8arraySize * 100);
+            if (u8arrayCurrentSize == u8arraySize) {
+              //alert("Done!!!")
+              setChunkFile(u8array);
+              u8array = new Uint8Array();
+              setDownloadStatus("success");
+              setIsSubmitted(false);
+              setVideoId(uuidv4());
+              sub.unsubscribe();
+              sjs.close();
+              await sc.deactivate();
+              //alert("Deactivate");
+            }
+          }
+        })
+
+        //alert("sc wow")
+        sc.publish({
+          destination: "/app/wsdownload",
+          body: JSON.stringify(request)
+        });
+      },
+      onDisconnect: function() {
+        //alert("Disconnect success!");
       }
+    });
 
-      const data = await response.json();
-      setRequestId(data.requestId);
-      setIsPolling(true);
-      return data;
-    } catch(error: any) {
-      console.error(error);
-      setApiError(error.message);
-      return error;
-    }
+    /* if (stompClient && stompClient.active) {
+      stompClient.deactivate();
+      alert("Deactivate");
+      setStompClient(sc)
+    } */
+
+    sc.activate();
+
+    //alert("cb: " + chunkSizeBytes)
   }
 
   const cancelRequest = async () => {
@@ -279,51 +358,24 @@ function App() {
   }
 
   const downloadFile = async () => {
-    if(!requestId || isDownloaded) {
-      return;
-    }
-
-    let url = api + `/downloads/${encodeURIComponent(requestId)}/file`;
-    const outputName = form.getValues().outputName;
-
-    if(outputName !== null && outputName.length > 0) {
-      url += `?output=${encodeURIComponent(outputName)}`;
-    }
-
-    setIsDownloaded(true); // Prevent pressing of download button multiple times
-
-    try {
-      const response = await fetch(url, {
-        method: "GET"
-      });
-
-      if(!response.ok) {
-        const res: ApiError = await response.json();
-        throw new Error(res.message);
-      }
-
-      const contentDisposition = response.headers.get("Content-Disposition");
-      const filename = parseFilenameFromContentDisposition(contentDisposition);
-      // console.log("Filename:", filename);
-      const blobUrl = window.URL.createObjectURL(await response.blob());
-      const a = document.createElement("a");
-      a.href = blobUrl;
-
-      if(!filename) {
-        throw new Error("No file returned");
-      }
-
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
-    } catch(error: any) {
-      setApiError(error.message);
-      setDownloadStatus(null);
-    } finally {
-      setIsDownloaded(false);
-    }
+    /* axios.get(api + "/d/" + videoId, {
+      responseType: "blob"
+    }).then(function(data) {
+      const url = window.URL.createObjectURL(new Blob([data.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", videoName + "." + ext);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }); */
+    const url = window.URL.createObjectURL(new Blob([chunkFile]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", videoName + "." + ext);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   return (
@@ -370,7 +422,10 @@ function App() {
                   <Button type='button' bg={color.light[0]} disabled={isCancelled} onClick={cancelRequest}>Cancel</Button>
                   <Center>
                     <Loader color={color.light[0]} />
+                    <Progress value={50} />
                   </Center>
+                  <Progress value={percentage} />
+                  <Progress value={pBytes} />
                 </>
               )
             }
