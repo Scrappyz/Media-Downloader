@@ -102,5 +102,9 @@ public class DownloadService {
     public boolean isProcessExist(String id) {
         return downloadHelper.isProcessExist(id);
     }
+
+    public SseEmitter getEmitter(String id) {
+        return downloadHelper.getEmitter(id);
+    }
     
 }

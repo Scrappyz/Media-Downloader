@@ -162,7 +162,7 @@ public class DownloadHelper {
         // Run when the download is complete
         emitters.get(id).onCompletion(() -> {
             log.info("[DownloadHelper.download] SseEmitter with ID " + id + " has completed");
-            removeEmitter(id);
+            emitters.remove(id);
         });
 
         try {
@@ -477,6 +477,14 @@ public class DownloadHelper {
     public void removeEmitter(String id) {
         emitters.get(id).complete();
         emitters.remove(id);
+    }
+
+    public SseEmitter getEmitter(String id) throws InvalidProcessException {
+        if(!emitters.containsKey(id)) {
+            throw new InvalidProcessException("Emitter with request ID " + id + " could not be found");
+        }
+
+        return emitters.get(id);
     }
 
     public FileSystemResource getResource(String id, boolean removeInResourceMap) throws ResourceNotFoundException {
