@@ -449,6 +449,11 @@ public class DownloadHelper {
         return processes.remove(id);
     }
 
+    public boolean cancelProcess(String id) {
+        cancelled.add(id);
+        return processes.remove(id);
+    }
+
     public void addEmitter(String id, SseEmitter emitter) {
         emitters.put(id, emitter);
     }

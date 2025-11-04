@@ -63,6 +63,7 @@ public class DownloadService {
         DownloadResponse result = new DownloadResponse();
         String id = UlidCreator.getMonotonicUlid().toString();
 
+        downloadHelper.addProcess(id);
         downloadHelper.addEmitter(id, emitter);
         downloadHelper.download(id, request);
 
@@ -81,6 +82,10 @@ public class DownloadService {
 
     public boolean removeProcess(String id) {
         return downloadHelper.removeProcess(id);
+    }
+
+    public boolean cancelProcess(String id) {
+        return downloadHelper.cancelProcess(id);
     }
 
     public FileSystemResource getResource(String id) {

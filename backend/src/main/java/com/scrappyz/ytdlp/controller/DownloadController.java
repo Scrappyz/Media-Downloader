@@ -82,20 +82,20 @@ public class DownloadController {
         return ResponseEntity.ok().headers(headers).body(resource);
     }
 
-    // @DeleteMapping("/{requestId}")
-    // public ResponseEntity<DownloadCancelResponse> cancelDownload(@PathVariable String requestId) {
-    //     DownloadCancelResponse response = new DownloadCancelResponse();
+    @DeleteMapping("/{requestId}")
+    public ResponseEntity<DownloadCancelResponse> cancelDownload(@PathVariable String requestId) {
+        DownloadCancelResponse response = new DownloadCancelResponse();
 
-    //     response.setStatus("success");
-    //     response.setMessage("Request was cancelled successfully");
+        response.setStatus("success");
+        response.setMessage("Request was cancelled successfully");
 
-    //     if(!downloadService.isProcessExist(requestId)) {
-    //         throw new InvalidProcessException("Process with request ID \"" + requestId + "\" could not be found");
-    //     }
+        if(!downloadService.isProcessExist(requestId)) {
+            throw new InvalidProcessException("Process with request ID \"" + requestId + "\" could not be found");
+        }
 
-    //     downloadService.cancelProcess(requestId);
+        downloadService.cancelProcess(requestId);
 
-    //     return ResponseEntity.ok().body(response);
-    // }
+        return ResponseEntity.ok().body(response);
+    }
     
 }
