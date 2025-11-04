@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.config.PathProperties;
+import com.scrappyz.ytdlp.dto.ApiError;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResult;
 import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
@@ -58,7 +59,7 @@ public class DownloadHelper {
         Arrays.asList("flac", "alac", "wav", "aiff", "opus", "vorbis", "aac", "mp4a", "m4a", "mp3", "ac4", "eac3", "ac3", "dts")
     );
 
-    private final ConcurrentHashMap<String, CompletableFuture<DownloadResult>> processes = new ConcurrentHashMap<>();
+    private final Set<String> processes = new ConcurrentHashMap<>().newKeySet();
 
     private final Set<String> cancelled = new ConcurrentHashMap<>().newKeySet();
 
@@ -66,21 +67,21 @@ public class DownloadHelper {
 
     private final ConcurrentHashMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
-    public enum MediaType {
+    public enum RequestType {
         VIDEO("video"),
         VIDEO_ONLY("video_only"),
         AUDIO_ONLY("audio_only");
 
         private final String string;
-        private static final HashMap<String, MediaType> byString = new HashMap<>();
+        private static final HashMap<String, RequestType> byString = new HashMap<>();
 
         static {
-            for(MediaType t: values()) {
+            for(RequestType t: values()) {
                 byString.put(t.string, t);
             }
         }
 
-        private MediaType(String string) {
+        private RequestType(String string) {
             this.string = string;
         }
 
@@ -88,7 +89,7 @@ public class DownloadHelper {
             return string;
         }
 
-        public static MediaType getMediaType(String str) {
+        public static RequestType getMediaType(String str) {
             return byString.get(str);
         }
     };
@@ -154,19 +155,20 @@ public class DownloadHelper {
     // For audio only: yt-dlp -f bestaudio[ext=m4a] <url>
     // For getting filename ahead of time: yt-dlp -o "%(title)s.%(ext)s" --get-filename <url>
     @Async("downloadExecutor")
-    public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) 
+    public void download(String id, DownloadRequest request) 
         throws InvalidUrlException, UnsupportedUrlException, FormatUnavailableException, DownloadFailedException, FailedProcessException {
 
         DownloadResult result = new DownloadResult("pending", "Download is pending");
+        SseEmitter emitter = emitters.get(id);
 
         // Run when the download is complete
-        emitters.get(id).onCompletion(() -> {
+        emitter.onCompletion(() -> {
             log.info("[DownloadHelper.download] SseEmitter with ID " + id + " has completed");
             emitters.remove(id);
         });
 
         try {
-            emitters.get(id).send(SseEmitter.event()
+            emitter.send(SseEmitter.event()
                 .name("status")
                 .data(result)
             );
@@ -193,10 +195,10 @@ public class DownloadHelper {
 
         log.info("[DownloadHelper.download] Downloading: " + url);
 
-        MediaType t = MediaType.getMediaType(type);
-        boolean isVideo = (t == MediaType.VIDEO || t == MediaType.VIDEO_ONLY);
-        boolean isVideoOnly = t == MediaType.VIDEO_ONLY;
-        boolean isAudioOnly = t == MediaType.AUDIO_ONLY;
+        RequestType t = RequestType.getMediaType(type);
+        boolean isVideo = (t == RequestType.VIDEO || t == RequestType.VIDEO_ONLY);
+        boolean isVideoOnly = t == RequestType.VIDEO_ONLY;
+        boolean isAudioOnly = t == RequestType.AUDIO_ONLY;
 
         String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audFormat);
         log.info("[DownloadHelper.download] Command Format: " + format);
@@ -228,19 +230,42 @@ public class DownloadHelper {
             error = parseError(errorOutput.get(errorOutput.size() - 1));
         }
 
-        if(error == ErrorCode.INVALID_URL) {
-            log.info("[DownloadHelper.download] Invalid URL");
-            throw new InvalidUrlException("The URL '" + url + "' is invalid");
-        }
+        try {
+            if(error == ErrorCode.INVALID_URL) {
+                log.info("[DownloadHelper.download] Invalid URL");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(ErrorCode.INVALID_URL.getString(), "The URL provided is invalid"))
+                );
+            }
 
-        if(error == ErrorCode.UNSUPPORTED_URL) {
-            log.info("[DownloadHelper.download] Unsupported URL");
-            throw new UnsupportedUrlException("The URL '" + url + "'' is unsupported");
-        }
+            if(error == ErrorCode.UNSUPPORTED_URL) {
+                log.info("[DownloadHelper.download] Unsupported URL");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(ErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is invalid"))
+                );
+            }
 
-        if(error == ErrorCode.FORMAT_UNAVAILABLE) {
-            log.info("[DownloadHelper.download] Format unavailable");
-            throw new FormatUnavailableException("The requested format is unavailable");
+            if(error == ErrorCode.FORMAT_UNAVAILABLE) {
+                log.info("[DownloadHelper.download] Format unavailable");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(ErrorCode.FORMAT_UNAVAILABLE.getString(), "The URL provided is invalid"))
+                );
+            }
+
+            if(error != null) {
+                emitter.complete();
+                processes.remove(id);
+                return;
+            }
+
+        } catch(IOException e) {
+            log.info("[DownloadHelper.download] Failed to send download failed status via SseEmitter");
+            emitter.completeWithError(e);
+            processes.remove(id);
+            return;
         }
 
         outputName = parseFilenameFromOutputStream(successOutput);
@@ -249,8 +274,14 @@ public class DownloadHelper {
         result.setStatus(RequestStatus.SUCCESS.getString());
         result.setMessage("Download has finished");
 
+        resourceMap.put(id, outputName);
+
+        resourceHelper.cleanup(id, outputName, processes, cancelled, resourceMap); // Cleanup resources in set time
+
+        log.info("[DownloadHelper.download] Download with ID " + id + " has finished");
+
         try {
-            emitters.get(id).send(SseEmitter.event()
+            emitter.send(SseEmitter.event()
                 .name("status")
                 .data(result)
             );
@@ -258,15 +289,7 @@ public class DownloadHelper {
             log.info("[DownloadHelper.download] Failed to send initial pending status via SseEmitter");
         }
 
-        emitters.get(id).complete();
-
-        resourceMap.put(id, outputName);
-
-        resourceHelper.cleanup(id, outputName, processes, cancelled, resourceMap); // Cleanup resources in set time
-
-        log.info("[DownloadHelper.download] Download with ID " + id + " has finished");
-        
-        return CompletableFuture.completedFuture(result);
+        emitter.complete();
     }
 
     // ---HELPER METHODS---
@@ -313,16 +336,16 @@ public class DownloadHelper {
         return audioFormat;
     }
 
-    private String resolveCommandFormat(MediaType type, Site site, String videoFormat, int videoQuality, String audioFormat) {
+    private String resolveCommandFormat(RequestType type, Site site, String videoFormat, int videoQuality, String audioFormat) {
         
-        boolean isVideo = (type == MediaType.VIDEO || type == MediaType.VIDEO_ONLY);
+        boolean isVideo = (type == RequestType.VIDEO || type == RequestType.VIDEO_ONLY);
         String formatType = "best";
 
-        if(type == MediaType.VIDEO_ONLY) {
+        if(type == RequestType.VIDEO_ONLY) {
             formatType += "video";
         }
 
-        if(type == MediaType.AUDIO_ONLY) {
+        if(type == RequestType.AUDIO_ONLY) {
             formatType = "bestaudio";
         }
 
@@ -414,55 +437,16 @@ public class DownloadHelper {
     }
     // ---HELPER METHODS---
 
-    public CompletableFuture<DownloadResult> getProcess(String id) throws InvalidProcessException {
-        if(!processes.containsKey(id)) {
-            throw new InvalidProcessException("Process with request ID " + id + " could not be found");
-        }
-
-        return processes.get(id);
-    }
-
-    public String getProcessStatus(String id) throws InvalidProcessException {
-        if(!processes.containsKey(id)) {
-            throw new InvalidProcessException("Process with request ID " + id + " could not be found");
-        }
-
-        CompletableFuture<DownloadResult> future = processes.get(id);
-
-        if(!future.isDone()) {
-            return RequestStatus.PENDING.getString();
-        }
-
-        return future.getNow(new DownloadResult()).getStatus();
-    }
-
-    public boolean isProcessFinished(String id) throws InvalidProcessException {
-        if(!processes.containsKey(id)) {
-            throw new InvalidProcessException("Process with request ID " + id + " could not be found");
-        }
-
-        return processes.get(id).isDone();
-    }
-
     public boolean isProcessExist(String id) {
-        return processes.containsKey(id);
+        return processes.contains(id);
     }
 
-    public void addProcess(String id, CompletableFuture<DownloadResult> future) {
-        processes.put(id, future);
-    }
-
-    public boolean cancelProcess(String id) {
-        boolean b = processes.get(id).cancel(true);
-        processes.remove(id);
-        cancelled.add(id);
-        return b;
+    public boolean addProcess(String id) {
+        return processes.add(id);
     }
 
     public boolean removeProcess(String id) {
-        boolean b = processes.get(id).cancel(true);
-        processes.remove(id);
-        return b;
+        return processes.remove(id);
     }
 
     public void addEmitter(String id, SseEmitter emitter) {
@@ -527,10 +511,6 @@ public class DownloadHelper {
         resourceMap.remove(id);
 
         return deleted;
-    }
-
-    public String getProcessesAsString() {
-        return processes.keySet().toString();
     }
 
     public String getResourceMapAsString() {

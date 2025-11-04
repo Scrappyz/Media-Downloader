@@ -51,19 +51,7 @@ public class DownloadController {
 
     @GetMapping("/{requestId}")
     public SseEmitter checkRequest(@PathVariable String requestId) {
-        return downloadService.getEmitter(requestId);
-        // CompletableFuture<DownloadResult> future = downloadService.getProcess(requestId);
-        // DownloadResult result = new DownloadResult();
-
-        // result.setStatus("pending");
-        // result.setMessage("Request is being processed");
-
-        // if(future.isDone()) {
-        //     result = future.getNow(result);
-        //     downloadService.removeProcess(requestId);
-        // }
-
-        // return ResponseEntity.ok().body(result);
+        return downloadService.getEmitter(requestId); // Subscribe to SSE events for this request
     }
 
     @GetMapping("/{requestId}/file")
@@ -94,20 +82,20 @@ public class DownloadController {
         return ResponseEntity.ok().headers(headers).body(resource);
     }
 
-    @DeleteMapping("/{requestId}")
-    public ResponseEntity<DownloadCancelResponse> cancelDownload(@PathVariable String requestId) {
-        DownloadCancelResponse response = new DownloadCancelResponse();
+    // @DeleteMapping("/{requestId}")
+    // public ResponseEntity<DownloadCancelResponse> cancelDownload(@PathVariable String requestId) {
+    //     DownloadCancelResponse response = new DownloadCancelResponse();
 
-        response.setStatus("success");
-        response.setMessage("Request was cancelled successfully");
+    //     response.setStatus("success");
+    //     response.setMessage("Request was cancelled successfully");
 
-        if(!downloadService.isProcessExist(requestId)) {
-            throw new InvalidProcessException("Process with request ID \"" + requestId + "\" could not be found");
-        }
+    //     if(!downloadService.isProcessExist(requestId)) {
+    //         throw new InvalidProcessException("Process with request ID \"" + requestId + "\" could not be found");
+    //     }
 
-        downloadService.cancelProcess(requestId);
+    //     downloadService.cancelProcess(requestId);
 
-        return ResponseEntity.ok().body(response);
-    }
+    //     return ResponseEntity.ok().body(response);
+    // }
     
 }

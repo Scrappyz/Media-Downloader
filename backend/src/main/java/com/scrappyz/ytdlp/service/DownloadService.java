@@ -61,34 +61,26 @@ public class DownloadService {
     // Queue the download request
     public DownloadResponse enqueue(DownloadRequest request, SseEmitter emitter) {
         DownloadResponse result = new DownloadResponse();
-        CompletableFuture<DownloadResult> f = new CompletableFuture<>();
         String id = UlidCreator.getMonotonicUlid().toString();
 
-        try {
-            f = downloadHelper.download(id, request); // Run in the background
-        } catch(RejectedExecutionException e) {
-            log.info("[ERROR] Rejected Execution due to full queue");
-            throw new FullDownloadQueueException("Download queue is full");
-        }
+        downloadHelper.addEmitter(id, emitter);
+        downloadHelper.download(id, request);
 
         result.setRequestId(id);
-
-        downloadHelper.addEmitter(id, emitter);
-        downloadHelper.addProcess(id, f);
 
         return result;
     }
 
-    public CompletableFuture<DownloadResult> getProcess(String id) {
-        return downloadHelper.getProcess(id);
+    public boolean isProcessExist(String id) {
+        return downloadHelper.isProcessExist(id);
+    }
+
+    public boolean addProcess(String id) {
+        return downloadHelper.addProcess(id);
     }
 
     public boolean removeProcess(String id) {
         return downloadHelper.removeProcess(id);
-    }
-
-    public boolean cancelProcess(String id) {
-        return downloadHelper.cancelProcess(id);
     }
 
     public FileSystemResource getResource(String id) {
@@ -97,10 +89,6 @@ public class DownloadService {
 
     public FileSystemResource getResource(String id, boolean removeInResourceMap) {
         return downloadHelper.getResource(id, removeInResourceMap);
-    }
-
-    public boolean isProcessExist(String id) {
-        return downloadHelper.isProcessExist(id);
     }
 
     public SseEmitter getEmitter(String id) {

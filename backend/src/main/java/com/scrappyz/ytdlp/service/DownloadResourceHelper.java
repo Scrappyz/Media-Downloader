@@ -14,7 +14,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.scrappyz.ytdlp.config.PathProperties;
-import com.scrappyz.ytdlp.dto.DownloadResult;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,11 +29,11 @@ public class DownloadResourceHelper {
     private long resourceExpiryTime;
     
     @Async("resourceExecutor")
-    public CompletableFuture<Boolean> cleanup(String id, String resourceName, ConcurrentHashMap<String, CompletableFuture<DownloadResult>> processes, 
+    public CompletableFuture<Boolean> cleanup(String id, String resourceName, Set<String> processes, 
         Set<String> cancelled, ConcurrentHashMap<String, String> resourceMap) { // Delete downloaded resource after a certain time. Also cleanup
         
         boolean isCancelled = cancelled.contains(id);
-        boolean isProcess = processes.containsKey(id);
+        boolean isProcess = processes.contains(id);
         boolean isResourceMapped = resourceMap.containsKey(id);
 
         if(!isCancelled) {
