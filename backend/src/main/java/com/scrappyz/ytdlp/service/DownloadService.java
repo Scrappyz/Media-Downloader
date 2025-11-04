@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.github.f4b6a3.ulid.UlidCreator;
 import com.scrappyz.ytdlp.config.PathProperties;
@@ -58,7 +59,7 @@ public class DownloadService {
     };
 
     // Queue the download request
-    public DownloadResponse enqueue(DownloadRequest request) {
+    public DownloadResponse enqueue(DownloadRequest request, SseEmitter emitter) {
         DownloadResponse result = new DownloadResponse();
         CompletableFuture<DownloadResult> f = new CompletableFuture<>();
         String id = UlidCreator.getMonotonicUlid().toString();
@@ -72,6 +73,7 @@ public class DownloadService {
 
         result.setRequestId(id);
 
+        downloadHelper.addEmitter(id, emitter);
         downloadHelper.addProcess(id, f);
 
         return result;

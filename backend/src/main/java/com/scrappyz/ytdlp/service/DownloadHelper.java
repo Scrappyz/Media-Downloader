@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
@@ -62,6 +63,8 @@ public class DownloadHelper {
     private final Set<String> cancelled = new ConcurrentHashMap<>().newKeySet();
 
     private final ConcurrentHashMap<String, String> resourceMap = new ConcurrentHashMap<>();
+
+    private final ConcurrentHashMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     public enum MediaType {
         VIDEO("video"),
@@ -154,7 +157,22 @@ public class DownloadHelper {
     public CompletableFuture<DownloadResult> download(String id, DownloadRequest request) 
         throws InvalidUrlException, UnsupportedUrlException, FormatUnavailableException, DownloadFailedException, FailedProcessException {
 
-        DownloadResult result = new DownloadResult();
+        DownloadResult result = new DownloadResult("pending", "Download is pending");
+
+        // Run when the download is complete
+        emitters.get(id).onCompletion(() -> {
+            log.info("[DownloadHelper.download] SseEmitter with ID " + id + " has completed");
+            removeEmitter(id);
+        });
+
+        try {
+            emitters.get(id).send(SseEmitter.event()
+                .name("status")
+                .data(result)
+            );
+        } catch(IOException e) {
+            log.info("[DownloadHelper.download] Failed to send initial pending status via SseEmitter");
+        }
 
         String url = request.getUrl();
         String type = request.getRequestType();
@@ -230,6 +248,18 @@ public class DownloadHelper {
 
         result.setStatus(RequestStatus.SUCCESS.getString());
         result.setMessage("Download has finished");
+
+        try {
+            emitters.get(id).send(SseEmitter.event()
+                .name("status")
+                .data(result)
+            );
+        } catch(IOException e) {
+            log.info("[DownloadHelper.download] Failed to send initial pending status via SseEmitter");
+        }
+
+        emitters.get(id).complete();
+
         resourceMap.put(id, outputName);
 
         resourceHelper.cleanup(id, outputName, processes, cancelled, resourceMap); // Cleanup resources in set time
@@ -433,6 +463,20 @@ public class DownloadHelper {
         boolean b = processes.get(id).cancel(true);
         processes.remove(id);
         return b;
+    }
+
+    public void addEmitter(String id, SseEmitter emitter) {
+        emitters.put(id, emitter);
+    }
+
+    public void removeEmitter(String id, Exception e) {
+        emitters.get(id).completeWithError(e);
+        emitters.remove(id);
+    }
+
+    public void removeEmitter(String id) {
+        emitters.get(id).complete();
+        emitters.remove(id);
     }
 
     public FileSystemResource getResource(String id, boolean removeInResourceMap) throws ResourceNotFoundException {
