@@ -5,6 +5,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 import org.apache.commons.io.FileUtils;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Component;
 
 import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.config.YtdlpConfig;
-import com.scrappyz.ytdlp.utils.ProcessUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -56,8 +56,14 @@ public class YtdlpUpdateOnStartup implements ApplicationListener<ApplicationRead
         log.info("[YtdlpUpdateOnStartup.onApplicationEvent] Updating yt-dlp");
 
         updateExecutor.execute(() -> {
+            List<String> commands = Arrays.asList(paths.getYtdlpBin().toString(), "-U");
             try {
-                ProcessUtils.runProcess(Arrays.asList(paths.getYtdlpBin().toString(), "-U"));
+                ProcessBuilder pb = new ProcessBuilder(commands);
+
+                Process process = pb.start();
+
+                int exitCode = process.waitFor();
+
                 log.info("[YtdlpUpdateOnStartup.onApplicationEvent] Updated yt-dlp successfully");
             } catch(IOException | InterruptedException e) {
                 log.info("[YtdlpUpdateOnStartup.onApplicationEvent] Failed to update yt-dlp: " + e.getMessage());

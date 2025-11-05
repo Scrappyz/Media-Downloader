@@ -1,9 +1,7 @@
 package com.scrappyz.ytdlp.service;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -37,6 +35,7 @@ import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
 import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
+import com.scrappyz.ytdlp.helper.YoutubeProcessResult;
 import com.scrappyz.ytdlp.service.DownloadService.RequestStatus;
 
 import lombok.RequiredArgsConstructor;
@@ -52,6 +51,7 @@ public class DownloadHelper {
     private final PathProperties paths;
 
     private final DownloadResourceHelper resourceHelper;
+    private final YoutubeDownloadProcessHandler downloadProcessHandler;
 
     // Constants
     private static final SortedSet<Integer> videoQuality = new TreeSet<>(
@@ -243,57 +243,21 @@ public class DownloadHelper {
 
         log.info("[DownloadHelper.download] Download Commands: " + String.join(" ", commands));
 
-        ProcessResult processResult = new ProcessResult();
+        YoutubeProcessResult processResult = new YoutubeProcessResult();
 
         try {
             DownloadProgressHelper progressHelper = progressHelperProvider.getObject();
-            ProcessBuilder pb = new ProcessBuilder(commands);
-
-            Process process = pb.start();
-
-            Thread outputStreamConsumer = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if(!processResult.hasOutputName() && line.startsWith("[download] Destination:")) {
-                            log.info("[DownloadHelper.download] Parsing output name from output stream line: " + line);
-                            int startIndex = line.lastIndexOf('\\');
-
-                            if(startIndex < 0) {
-                                startIndex = line.lastIndexOf('/');
-                            }
-
-                            String filename = line.substring(startIndex + 1);
-                            processResult.setOutputName(filename);
-                            continue;
-                        }
-
-                        progressHelper.processLine(line, emitter); // Or handle the output line as needed
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
+            processResult = downloadProcessHandler.runProcess(
+                commands,
+                emitter,
+                (line, em) -> {
+                    progressHelper.processLine(line, em); // Or handle the output line as needed
+                },
+                (line) -> {
+                    return parseError(line); // Or handle the error line as needed
                 }
-            });
-            outputStreamConsumer.start();
-
-            Thread errorStreamConsumer = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        processResult.setError(parseError(line)); // Or handle the error line as needed
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-
-            errorStreamConsumer.start();
-
-            int exitCode = process.waitFor();
-
-            outputStreamConsumer.join();
-            errorStreamConsumer.join();
-        } catch(IOException | InterruptedException e) {
+            );
+        } catch(DownloadFailedException e) {
             log.info("[DownloadHelper.download] Remove process with ID " + id + " because of error");
             throw new DownloadFailedException();
         }
