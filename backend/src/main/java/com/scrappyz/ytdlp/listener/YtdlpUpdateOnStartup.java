@@ -43,7 +43,7 @@ public class YtdlpUpdateOnStartup implements ApplicationListener<ApplicationRead
         if(!isEmpty) {
             log.info("[YtdlpUpdateOnStartup.onApplicationEvent] Emptying download directory contents on startup");
             try {
-                FileUtils.deleteDirectory(paths.getDownloadPath().toFile());
+                FileUtils.cleanDirectory(paths.getDownloadPath().toFile());
             } catch(IOException e) {
                 e.printStackTrace();
             }

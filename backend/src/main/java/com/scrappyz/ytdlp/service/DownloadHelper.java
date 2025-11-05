@@ -1,7 +1,9 @@
 package com.scrappyz.ytdlp.service;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,11 +16,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -36,7 +38,6 @@ import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
 import com.scrappyz.ytdlp.service.DownloadService.RequestStatus;
-import com.scrappyz.ytdlp.utils.ProcessUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -45,6 +46,8 @@ import lombok.RequiredArgsConstructor;
 public class DownloadHelper {
 
     private static final Logger log = LoggerFactory.getLogger(DownloadHelper.class);
+
+    private final ObjectProvider<DownloadProgressHelper> progressHelperProvider;
     
     private final PathProperties paths;
 
@@ -66,6 +69,8 @@ public class DownloadHelper {
     private final ConcurrentHashMap<String, String> resourceMap = new ConcurrentHashMap<>();
 
     private final ConcurrentHashMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, DownloadRequest> pendingRequests = new ConcurrentHashMap<>();
+    private final Set<String> startedDownloads = ConcurrentHashMap.newKeySet();
 
     public enum RequestType {
         VIDEO("video"),
@@ -149,6 +154,31 @@ public class DownloadHelper {
         }
     };
 
+    public static class ProcessResult {
+        private String outputName;
+        private ErrorCode error;
+
+        public String getOutputName() {
+            return outputName;
+        }
+
+        public void setOutputName(String outputName) {
+            this.outputName = outputName;
+        }
+
+        public ErrorCode getError() {
+            return error;
+        }
+
+        public void setError(ErrorCode error) {
+            this.error = error;
+        }
+
+        public boolean hasOutputName() {
+            return outputName != null && !outputName.isEmpty();
+        }
+    }
+
     // Methods:
     // For video + audio: yt-dlp -f best[ext=mp4][height<=720] <url>
     // For video only: yt-dlp -f bestvideo[ext=mp4][height<=720] <url>
@@ -209,26 +239,66 @@ public class DownloadHelper {
         commands.add(paths.getYtdlpBin().toString());
         commands.addAll(Arrays.asList("-f", format));
         commands.addAll(Arrays.asList(url, "-P", paths.getDownloadPath().toString()));
-        commands.addAll(Arrays.asList("-o", outputName + ".%(ext)s", "--no-warnings", "--no-progress"));
+        commands.addAll(Arrays.asList("-o", outputName + ".%(ext)s", "--no-warnings", "--newline"));
 
         log.info("[DownloadHelper.download] Download Commands: " + String.join(" ", commands));
 
-        ProcessUtils.ProcessResult processResult = new ProcessUtils.ProcessResult();
+        ProcessResult processResult = new ProcessResult();
 
         try {
-            processResult = ProcessUtils.runProcess(commands);
+            DownloadProgressHelper progressHelper = progressHelperProvider.getObject();
+            ProcessBuilder pb = new ProcessBuilder(commands);
+
+            Process process = pb.start();
+
+            Thread outputStreamConsumer = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if(!processResult.hasOutputName() && line.startsWith("[download] Destination:")) {
+                            log.info("[DownloadHelper.download] Parsing output name from output stream line: " + line);
+                            int startIndex = line.lastIndexOf('\\');
+
+                            if(startIndex < 0) {
+                                startIndex = line.lastIndexOf('/');
+                            }
+
+                            String filename = line.substring(startIndex + 1);
+                            processResult.setOutputName(filename);
+                            continue;
+                        }
+
+                        progressHelper.processLine(line, emitter); // Or handle the output line as needed
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            outputStreamConsumer.start();
+
+            Thread errorStreamConsumer = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        processResult.setError(parseError(line)); // Or handle the error line as needed
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+
+            errorStreamConsumer.start();
+
+            int exitCode = process.waitFor();
+
+            outputStreamConsumer.join();
+            errorStreamConsumer.join();
         } catch(IOException | InterruptedException e) {
             log.info("[DownloadHelper.download] Remove process with ID " + id + " because of error");
             throw new DownloadFailedException();
         }
 
-        List<String> successOutput = processResult.getOutput();
-        List<String> errorOutput = processResult.getErrorOutput();
-        ErrorCode error = null;
-
-        if(!errorOutput.isEmpty()) {
-            error = parseError(errorOutput.get(errorOutput.size() - 1));
-        }
+        ErrorCode error = processResult.getError();
 
         try {
             if(error == ErrorCode.INVALID_URL) {
@@ -268,7 +338,7 @@ public class DownloadHelper {
             return;
         }
 
-        outputName = parseFilenameFromOutputStream(successOutput);
+        outputName = processResult.getOutputName();
         log.info("[DownloadHelper.download] Output filename is '" + outputName + "'");
 
         result.setStatus(RequestStatus.SUCCESS.getString());
