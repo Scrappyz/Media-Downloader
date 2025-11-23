@@ -9,6 +9,8 @@ import { parseFilenameFromContentDisposition } from './utils';
 
 import { color } from './themes';
 
+import { useSSE } from './hooks/useSSE';
+
 interface DownloadRequest {
   requestType: string | undefined,
   url: string,
@@ -41,6 +43,19 @@ function App() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
+
+  const { data, error, isConnected, isConnecting, connect, disconnect, clearData } = useSSE(
+  api + `/downloads/${requestId}`,
+  {
+    onMessage: (data) => console.log('Received:', data),
+    onError: (error) => console.error('SSE Error:', error),
+    onOpen: () => console.log('Connected'),
+    eventName: 'custom-event', // Default is 'message'
+    reconnect: true,
+    maxRetries: 5,
+    retryDelay: 1000,
+  }
+);
 
   // console.log("RequestID:", requestId);
 
