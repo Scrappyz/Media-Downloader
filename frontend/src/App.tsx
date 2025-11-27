@@ -20,10 +20,6 @@ interface DownloadRequest {
   outputName?: string
 };
 
-// interface DownloadResponse {
-//   requestId: string
-// };
-
 interface StatusResponse {
   status: string,
   message: string | null
@@ -38,24 +34,10 @@ function App() {
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
-  const [isPolling, setIsPolling] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
-
-  const { data, error, isConnected, isConnecting, connect, disconnect, clearData } = useSSE(
-  api + `/downloads/${requestId}`,
-  {
-    onMessage: (data) => console.log('Received:', data),
-    onError: (error) => console.error('SSE Error:', error),
-    onOpen: () => console.log('Connected'),
-    eventName: 'custom-event', // Default is 'message'
-    reconnect: true,
-    maxRetries: 5,
-    retryDelay: 1000,
-  }
-);
 
   // console.log("RequestID:", requestId);
 
@@ -63,7 +45,6 @@ function App() {
   const videoQualities: string[] = ["144p", "240p", "360p", "480p", "720p", "1080p", "2160p"];
   const videoFormats: string[] = ["mp4", "mkv"];
   const audioFormats: string[] = ["mp3", "m4a", "wav", "flac"];
-  const pollInterval: number = 2000;
 
   const mediaTypeMap = new Map<string, string>([
     ["Video", "video"],
@@ -97,16 +78,47 @@ function App() {
   const type = form.getValues().type;
   const isVideo: boolean = (type === "Video" || type === "Video Only");
 
-  const currentAbort = useRef<AbortController | null>(null);
-  const mounted = useRef(true);
   useEffect(() => {
-    mounted.current = true;
+    if(!requestId) return;
+
+    const sseUrl = api + `/downloads/${encodeURIComponent(requestId)}`;
+    console.log("SSE URL:", sseUrl);
+    const eventSource = new EventSource(sseUrl);
+
+    eventSource.onopen = () => {
+      console.log("SSE connection opened");
+    }
+
+    eventSource.addEventListener("status", (event) => {
+      try {
+        const data: any = JSON.parse(event.data);
+        console.log("Parsed SSE Data:", data);
+        if(data.status === "success") {
+          eventSource.close();
+        }
+      } catch (error) {
+        console.error("Error parsing SSE data:", error);
+      }
+    });
+
+    eventSource.addEventListener("progress", (event) => {
+      try {
+        const data: any = JSON.parse(event.data);
+        console.log("Progress:", data);
+      } catch (error) {
+        console.error("Error parsing SSE data:", error);
+      }
+    });
+
+    eventSource.onerror = (error) => {
+      eventSource.close();
+    }
+
     return () => {
-      mounted.current = false;
-      // abort any pending request
-      currentAbort.current?.abort();
-    };
-  }, []);
+      eventSource.close();
+      console.log("SSE closed");
+    }
+  }, [requestId]);
 
   const handlePaste = async () => {
     try {
@@ -139,92 +151,9 @@ function App() {
     return request;
   }
 
-  useEffect(() => {
-
-    if(!requestId || !isPolling) {
-      return;
-    }
-
-    let timer: number | null = null;
-    let stopped = false;
-
-    const pollStatus = async () => {
-      // abort previous
-      currentAbort.current?.abort();
-      const ac = new AbortController();
-      currentAbort.current = ac;
-
-      try {
-        const res = await fetch(api + `/downloads/${encodeURIComponent(requestId)}`, {
-          method: "GET",
-          headers: { "Accept": "application/json" },
-          signal: ac.signal,
-        });
-
-        if(!res.ok) { // If it is not ok, stop polling
-          const response: ApiError = await res.json();
-          throw new Error(response.message);
-        }
-
-        const body: StatusResponse = await res.json();
-
-        if(!mounted.current) return;
-
-        setDownloadStatus(body.status);        
-
-        if(body.status === "success") {
-          setIsSubmitted(false); // Show submit button again
-          setIsPolling(false); // Stop polling
-          return;
-        }
-
-        // schedule next poll
-        timer = setTimeout(() => {
-          if(!stopped) {
-            pollStatus()
-          };
-        }, pollInterval);
-
-      } catch(error: any) {
-
-        if(error.name === "AbortError") {
-          return;
-        }
-
-        setIsPolling(false);
-
-        // network or server error — show and retry after interval
-        if(!mounted.current) return;
-
-        setApiError(error?.message ?? "Polling error");
-
-        setDownloadStatus(null);
-        setIsSubmitted(false);
-
-        timer = setTimeout(() => {
-          if (!stopped) {
-            pollStatus()
-          };
-        }, pollInterval);
-
-      }
-    };
-
-    // initial immediate poll
-    pollStatus();
-
-    return () => {
-      stopped = true;
-      if(timer !== null) window.clearTimeout(timer);
-      currentAbort.current?.abort();
-    };
-
-  }, [requestId, isPolling]);
-
   const reset = () => {
     setApiError(null);
     setRequestId(null);
-    setIsPolling(false);
     setDownloadStatus(null);
     setIsDownloaded(false);
     setIsSubmitted(false);
@@ -260,7 +189,6 @@ function App() {
 
       const data = await response.json();
       setRequestId(data.requestId);
-      setIsPolling(true);
       return data;
     } catch(error: any) {
       console.error(error);
