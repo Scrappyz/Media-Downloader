@@ -9,7 +9,7 @@ import { parseFilenameFromContentDisposition } from './utils';
 
 import { color } from './themes';
 
-import { useSSE } from './hooks/useSSE';
+import { useDownloadProgress } from './hooks/useDownloadProgress';
 
 interface DownloadRequest {
   requestType: string | undefined,
@@ -38,8 +38,7 @@ function App() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
-
-  // console.log("RequestID:", requestId);
+  const { status, progress } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}`) : null});
 
   const mediaTypes: string[] = ["Video", "Video Only", "Audio Only"];
   const videoQualities: string[] = ["144p", "240p", "360p", "480p", "720p", "1080p", "2160p"];
@@ -78,48 +77,6 @@ function App() {
   const type = form.getValues().type;
   const isVideo: boolean = (type === "Video" || type === "Video Only");
 
-  useEffect(() => {
-    if(!requestId) return;
-
-    const sseUrl = api + `/downloads/${encodeURIComponent(requestId)}`;
-    console.log("SSE URL:", sseUrl);
-    const eventSource = new EventSource(sseUrl);
-
-    eventSource.onopen = () => {
-      console.log("SSE connection opened");
-    }
-
-    eventSource.addEventListener("status", (event) => {
-      try {
-        const data: any = JSON.parse(event.data);
-        console.log("Parsed SSE Data:", data);
-        if(data.status === "success") {
-          eventSource.close();
-        }
-      } catch (error) {
-        console.error("Error parsing SSE data:", error);
-      }
-    });
-
-    eventSource.addEventListener("progress", (event) => {
-      try {
-        const data: any = JSON.parse(event.data);
-        console.log("Progress:", data);
-      } catch (error) {
-        console.error("Error parsing SSE data:", error);
-      }
-    });
-
-    eventSource.onerror = (error) => {
-      eventSource.close();
-    }
-
-    return () => {
-      eventSource.close();
-      console.log("SSE closed");
-    }
-  }, [requestId]);
-
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -154,7 +111,6 @@ function App() {
   const reset = () => {
     setApiError(null);
     setRequestId(null);
-    setDownloadStatus(null);
     setIsDownloaded(false);
     setIsSubmitted(false);
     setIsCancelled(false);
@@ -165,10 +121,10 @@ function App() {
       return;
     }
 
-    setDownloadStatus(null);
     setIsDownloaded(false);
     setIsSubmitted(true);
     setApiError(null);
+    setDownloadStatus(null);
 
     console.log("Form Values:", values);
     const request = transformRequest(values);
@@ -263,11 +219,17 @@ function App() {
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     } catch(error: any) {
       setApiError(error.message);
-      setDownloadStatus(null);
     } finally {
       setIsDownloaded(false);
     }
   };
+
+  useEffect(() => {
+    if(status !== "success") return;
+
+    setDownloadStatus(status);
+    setIsSubmitted(false);
+  }, [status]);
 
   return (
     <MantineProvider defaultColorScheme="light">
@@ -312,7 +274,11 @@ function App() {
                 <>
                   <Button type='button' bg={color.light[0]} disabled={isCancelled} onClick={cancelRequest}>Cancel</Button>
                   <Center>
-                    <Loader color={color.light[0]} />
+                    {/* <Loader color={color.light[0]} />
+                    {
+                      (progress > 0) && <Text>{progress}%</Text>
+                    } */}
+                    <progress value={progress} max={100} />
                   </Center>
                 </>
               )

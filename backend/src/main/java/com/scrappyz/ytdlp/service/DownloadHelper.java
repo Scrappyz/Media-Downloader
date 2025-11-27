@@ -323,6 +323,17 @@ public class DownloadHelper {
             log.info("[DownloadHelper.download] Failed to send initial pending status via SseEmitter");
         }
 
+        result.setStatus("success");
+
+        try {
+            emitter.send(SseEmitter.event()
+                .name("status")
+                .data(result)
+            );
+        } catch(IOException e) {
+            log.info("[DownloadHelper.processLine] Failed to send progress update via SseEmitter");
+        }
+
         emitter.complete();
     }
 

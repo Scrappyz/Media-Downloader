@@ -1,0 +1,58 @@
+import { useState, useEffect } from "react";
+
+interface SSEParameters {
+    requestId: string,
+    url: string | null
+}
+
+interface ProgressData {
+    status: string | null,
+    progress: number
+}
+
+export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressData => {
+    const [status, setStatus] = useState<string | null>(null);
+    const [progress, setProgress] = useState<number>(0);
+
+    const reset = () => {
+        setStatus(null);
+        setProgress(0);
+    }
+
+    useEffect(() => {
+        if(!requestId || !url) return;
+
+        const eventSource = new EventSource(url);
+
+        eventSource.onopen = () => {
+            console.log("SSE Connection opened.");
+        }
+
+        eventSource.addEventListener("status", (event: MessageEvent) => {
+            const parsedData = JSON.parse(event.data);
+            console.log("Status Update:", parsedData);
+            if(parsedData.status === "success") {
+                reset();
+                eventSource.close();
+            }
+            setStatus(parsedData.status);
+        });
+
+        eventSource.addEventListener("progress", (event: MessageEvent) => {
+            const parsedData = JSON.parse(event.data);
+            console.log("Progress Update:", parsedData);
+            setProgress(parsedData.progress);
+        });
+
+        eventSource.onerror = (error) => {
+            console.error("SSE Error:", error);
+            eventSource.close();
+        }
+
+        return () => {
+            eventSource.close();
+        };
+    }, [requestId]);
+
+    return { status, progress };
+}
