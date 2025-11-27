@@ -10,6 +10,7 @@ import { parseFilenameFromContentDisposition } from './utils';
 import { color } from './themes';
 
 import { useDownloadProgress } from './hooks/useDownloadProgress';
+import ProgressBar from './components/ProgressBar';
 
 interface DownloadRequest {
   requestType: string | undefined,
@@ -225,11 +226,22 @@ function App() {
   };
 
   useEffect(() => {
+    if(status === "pending") {
+      setDownloadStatus(status);
+      return;
+    }
+
     if(status !== "success") return;
 
     setDownloadStatus(status);
     setIsSubmitted(false);
   }, [status]);
+
+  let progressBar = <ProgressBar progress={0} fillColor={color.light[0]} message="Pending..." />;
+
+  if(downloadStatus === "pending" && progress > 0) {
+    progressBar = <ProgressBar progress={progress} fillColor={color.light[0]} />;
+  }
 
   return (
     <MantineProvider defaultColorScheme="light">
@@ -273,13 +285,7 @@ function App() {
               (isSubmitted) && (
                 <>
                   <Button type='button' bg={color.light[0]} disabled={isCancelled} onClick={cancelRequest}>Cancel</Button>
-                  <Center>
-                    {/* <Loader color={color.light[0]} />
-                    {
-                      (progress > 0) && <Text>{progress}%</Text>
-                    } */}
-                    <progress value={progress} max={100} />
-                  </Center>
+                  {progressBar}
                 </>
               )
             }
