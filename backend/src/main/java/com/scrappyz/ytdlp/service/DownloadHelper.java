@@ -328,7 +328,7 @@ public class DownloadHelper {
         try {
             emitter.send(SseEmitter.event()
                 .name("status")
-                .data(result)
+                .data(result) 
             );
         } catch(IOException e) {
             log.info("[DownloadHelper.processLine] Failed to send progress update via SseEmitter");

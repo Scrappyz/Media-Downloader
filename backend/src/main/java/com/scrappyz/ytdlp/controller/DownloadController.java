@@ -43,8 +43,7 @@ public class DownloadController {
     
     @PostMapping
     public ResponseEntity<DownloadResponse> download(@RequestBody DownloadRequest request) {
-        SseEmitter emitter = new SseEmitter();
-        DownloadResponse response = downloadService.enqueue(request, emitter);
+        DownloadResponse response = downloadService.enqueue(request);
 
         return ResponseEntity.ok().body(response);
     }

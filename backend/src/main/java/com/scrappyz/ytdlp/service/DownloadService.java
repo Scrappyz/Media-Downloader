@@ -1,8 +1,6 @@
 package com.scrappyz.ytdlp.service;
 
 import java.util.HashMap;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.RejectedExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,11 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.github.f4b6a3.ulid.UlidCreator;
+import com.scrappyz.ytdlp.config.DownloadProperties;
 import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
-import com.scrappyz.ytdlp.dto.DownloadResult;
-import com.scrappyz.ytdlp.exception.custom.FullDownloadQueueException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +23,7 @@ public class DownloadService {
     private static final Logger log = LoggerFactory.getLogger(DownloadService.class);
 
     private final PathProperties paths;
+    private final DownloadProperties downloadProperties;
 
     private final DownloadHelper downloadHelper;
 
@@ -59,12 +57,12 @@ public class DownloadService {
     };
 
     // Queue the download request
-    public DownloadResponse enqueue(DownloadRequest request, SseEmitter emitter) {
+    public DownloadResponse enqueue(DownloadRequest request) {
         DownloadResponse result = new DownloadResponse();
         String id = UlidCreator.getMonotonicUlid().toString();
 
         downloadHelper.addProcess(id);
-        downloadHelper.addEmitter(id, emitter);
+        downloadHelper.addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
         downloadHelper.download(id, request);
 
         result.setRequestId(id);

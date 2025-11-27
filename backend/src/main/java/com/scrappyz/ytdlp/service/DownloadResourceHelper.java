@@ -3,6 +3,7 @@ package com.scrappyz.ytdlp.service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,8 +26,8 @@ public class DownloadResourceHelper {
 
     private final PathProperties paths;
 
-    @Value("#{${resource.expiry.time} * ${time.multiplier}}")
-    private long resourceExpiryTime;
+    @Value("${resource.expiry.time}")
+    private Duration resourceExpiryTime;
     
     @Async("resourceExecutor")
     public CompletableFuture<Boolean> cleanup(String id, String resourceName, Set<String> processes, 
@@ -36,10 +37,12 @@ public class DownloadResourceHelper {
         boolean isProcess = processes.contains(id);
         boolean isResourceMapped = resourceMap.containsKey(id);
 
+        long expiryMillis = resourceExpiryTime.toMillis();
+
         if(!isCancelled) {
-            log.info("[DownloadResourceHelper.cleanup] Cleanup in " + Long.toString(resourceExpiryTime) + " ms");
+            log.info("[DownloadResourceHelper.cleanup] Cleanup in " + Long.toString(expiryMillis) + " ms");
             try {
-                Thread.sleep(resourceExpiryTime);
+                Thread.sleep(expiryMillis);
             } catch(InterruptedException e) {
                 e.printStackTrace();
             }
