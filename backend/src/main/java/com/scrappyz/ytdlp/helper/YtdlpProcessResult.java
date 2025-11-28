@@ -2,7 +2,7 @@ package com.scrappyz.ytdlp.helper;
 
 import com.scrappyz.ytdlp.service.DownloadHelper.ErrorCode;
 
-public class YoutubeProcessResult {
+public class YtdlpProcessResult {
     
     private String outputName;
     private ErrorCode error;

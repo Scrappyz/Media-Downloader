@@ -35,7 +35,7 @@ import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
 import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
-import com.scrappyz.ytdlp.helper.YoutubeProcessResult;
+import com.scrappyz.ytdlp.helper.YtdlpProcessResult;
 import com.scrappyz.ytdlp.service.DownloadService.RequestStatus;
 
 import lombok.RequiredArgsConstructor;
@@ -51,7 +51,7 @@ public class DownloadHelper {
     private final PathProperties paths;
 
     private final DownloadResourceHelper resourceHelper;
-    private final YoutubeDownloadProcessHandler downloadProcessHandler;
+    private final YtdlpDownloadProcessHandler downloadProcessHandler;
 
     // Constants
     private static final SortedSet<Integer> videoQuality = new TreeSet<>(
@@ -243,7 +243,7 @@ public class DownloadHelper {
 
         log.info("[DownloadHelper.download] Download Commands: " + String.join(" ", commands));
 
-        YoutubeProcessResult processResult = new YoutubeProcessResult();
+        YtdlpProcessResult processResult = new YtdlpProcessResult();
 
         try {
             DownloadProgressHelper progressHelper = progressHelperProvider.getObject();

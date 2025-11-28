@@ -9,17 +9,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
-import com.scrappyz.ytdlp.helper.YoutubeProcessResult;
+import com.scrappyz.ytdlp.helper.YtdlpProcessResult;
 
 import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class YoutubeDownloadProcessHandler implements DownloadProcessHandler<YoutubeProcessResult> {
+public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<YtdlpProcessResult> {
     
     @Override
-    public YoutubeProcessResult runProcess(List<String> commands, SseEmitter emitter, ProcessLineHandler processLineHandler, ErrorLineHandler errorLineHandler) throws DownloadFailedException {
-        YoutubeProcessResult processResult = new YoutubeProcessResult();
+    public YtdlpProcessResult runProcess(List<String> commands, SseEmitter emitter, ProcessLineHandler processLineHandler, ErrorLineHandler errorLineHandler) throws DownloadFailedException {
+        YtdlpProcessResult processResult = new YtdlpProcessResult();
         
         try {
             ProcessBuilder pb = new ProcessBuilder(commands);
