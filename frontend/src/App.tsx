@@ -237,11 +237,7 @@ function App() {
     setIsSubmitted(false);
   }, [status]);
 
-  let progressBar = <ProgressBar progress={0} fillColor={color.light[0]} message="Pending..." />;
-
-  if(downloadStatus === "pending" && progress > 0) {
-    progressBar = <ProgressBar progress={progress} fillColor={color.light[0]} />;
-  }
+  let progressBarMessage = (progress > 0) ? `Downloading: ${progress}%` : "Pending...";
 
   return (
     <MantineProvider defaultColorScheme="light">
@@ -285,7 +281,7 @@ function App() {
               (isSubmitted) && (
                 <>
                   <Button type='button' bg={color.light[0]} disabled={isCancelled} onClick={cancelRequest}>Cancel</Button>
-                  {progressBar}
+                  <ProgressBar progress={progress} fillColor={color.light[0]} message={progressBarMessage} />
                 </>
               )
             }

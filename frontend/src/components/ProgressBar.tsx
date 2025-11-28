@@ -51,9 +51,7 @@ const ProgressBar = ({progress, fillColor, message}: ProgressBarProps) => {
 
             </div>
             <div style={textStyle}>
-                {
-                    message ? message : `${progress}%`
-                }
+                {message}
             </div>
         </div>
     );
