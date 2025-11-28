@@ -2,44 +2,71 @@ import { Button } from '@mantine/core';
 
 interface ProgressBarProps {
     progress: number
-    fillColor: string,
-    message?: string
+    message?: string,
+    style?: ProgressBarStyle
 }
 
-const ProgressBar = ({progress, fillColor, message}: ProgressBarProps) => {
+interface ProgressBarStyle {
+    width?: string,
+    height?: string,
+    backgroundColor?: string,
+    fillColor?: string,
+    borderRadius?: string,
+    fontFamily?: string,
+    fontStyle?: string,
+    fontWeight?: string | number,
+    fontSize?: string,
+    textColor?: string
+}
+
+const ProgressBar = ({progress, message, style}: ProgressBarProps) => {
+
+    const defaultStyle: ProgressBarStyle = {
+        width: "100%",
+        height: "35px",
+        backgroundColor: "gray",
+        fillColor: "green",
+        borderRadius: "5px",
+        fontFamily: "Arial, sans-serif",
+        fontStyle: "normal",
+        fontWeight: "bold",
+        fontSize: "16px",
+        textColor: "white"
+    }
+
+    style = {...defaultStyle, ...style};
 
     const parentStyle = {
         position: "relative" as const,
-        width: "100%",
-        height: "35px"
+        width: style.width,
+        height: style.height
     }
 
     const backgroundStyle = {
         position: "absolute" as const,
-        width: "100%",
-        height: "100%",
-        backgroundColor: "gray",
-        borderRadius: "5px"
+        width: style.width,
+        height: style.height,
+        backgroundColor: style.backgroundColor,
+        borderRadius: style.borderRadius
     };
 
     const foregroundStyle = {
         position: "absolute" as const,
         width: `${progress}%`,
-        height: "100%",
-        backgroundColor: fillColor,
-        borderRadius: "5px",
+        height: style.height,
+        backgroundColor: style.fillColor,
+        borderRadius: style.borderRadius,
         transition: "width 0.5s ease-in-out"
     }
 
     const textStyle = {
         position: "absolute" as const,
-        width: "100%",
-        height: "100%",
+        width: style.width,
+        height: style.height,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "white",
-        fontWeight: "bold" as const
+        color: style.textColor
     }
 
     return (

@@ -281,7 +281,7 @@ function App() {
               (isSubmitted) && (
                 <>
                   <Button type='button' bg={color.light[0]} disabled={isCancelled} onClick={cancelRequest}>Cancel</Button>
-                  <ProgressBar progress={progress} fillColor={color.light[0]} message={progressBarMessage} />
+                  <ProgressBar progress={progress} message={progressBarMessage} style={{fillColor: color.light[0]}} />
                 </>
               )
             }
