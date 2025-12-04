@@ -62,15 +62,13 @@ public class DownloadHelper {
         Arrays.asList("flac", "alac", "wav", "aiff", "opus", "vorbis", "aac", "mp4a", "m4a", "mp3", "ac4", "eac3", "ac3", "dts")
     );
 
-    private final Set<String> processes = new ConcurrentHashMap<>().newKeySet();
+    private final Set<String> processes = new ConcurrentHashMap<>().newKeySet(); // To be removed later
 
-    private final Set<String> cancelled = new ConcurrentHashMap<>().newKeySet();
+    private final Set<String> cancelled = new ConcurrentHashMap<>().newKeySet(); // To be removed later
 
     private final ConcurrentHashMap<String, String> resourceMap = new ConcurrentHashMap<>();
 
     private final ConcurrentHashMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, DownloadRequest> pendingRequests = new ConcurrentHashMap<>();
-    private final Set<String> startedDownloads = ConcurrentHashMap.newKeySet();
 
     public enum RequestType {
         VIDEO("video"),
@@ -249,6 +247,7 @@ public class DownloadHelper {
             DownloadProgressHelper progressHelper = progressHelperProvider.getObject();
             processResult = downloadProcessHandler.runProcess(
                 commands,
+                id,
                 emitter,
                 (line, em) -> {
                     progressHelper.processLine(line, em); // Or handle the output line as needed

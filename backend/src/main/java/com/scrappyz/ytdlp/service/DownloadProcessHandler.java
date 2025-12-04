@@ -9,6 +9,7 @@ import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
 public interface DownloadProcessHandler<T> {
 
     T runProcess(List<String> commands,
+                 String id,
                  SseEmitter emitter,
                  ProcessLineHandler processLineHandler,
                  ErrorLineHandler errorLineHandler) throws DownloadFailedException;

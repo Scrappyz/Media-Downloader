@@ -4,11 +4,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
+import com.scrappyz.ytdlp.helper.YtdlpDownloadProcess;
 import com.scrappyz.ytdlp.helper.YtdlpProcessResult;
 
 import lombok.RequiredArgsConstructor;
@@ -16,9 +20,11 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<YtdlpProcessResult> {
+
+    private final ConcurrentHashMap<String, YtdlpDownloadProcess> processes = new ConcurrentHashMap<>();
     
     @Override
-    public YtdlpProcessResult runProcess(List<String> commands, SseEmitter emitter, ProcessLineHandler processLineHandler, ErrorLineHandler errorLineHandler) throws DownloadFailedException {
+    public YtdlpProcessResult runProcess(List<String> commands, String id, SseEmitter emitter, ProcessLineHandler processLineHandler, ErrorLineHandler errorLineHandler) throws DownloadFailedException {
         YtdlpProcessResult processResult = new YtdlpProcessResult();
         
         try {
@@ -26,7 +32,13 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
 
             Process process = pb.start();
 
-            Thread outputStreamConsumer = new Thread(() -> {
+            processes.put(id, new YtdlpDownloadProcess());
+            
+            YtdlpDownloadProcess downloadProcess = processes.get(id);
+            downloadProcess.setProcess(process);
+            downloadProcess.setExecutorService(Executors.newFixedThreadPool(2));
+
+            downloadProcess.getExecutorService().execute(() -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
@@ -52,9 +64,8 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                     e.printStackTrace();
                 }
             });
-            outputStreamConsumer.start();
 
-            Thread errorStreamConsumer = new Thread(() -> {
+            downloadProcess.getExecutorService().execute(() -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
@@ -69,17 +80,33 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                 }
             });
 
-            errorStreamConsumer.start();
-
-            int exitCode = process.waitFor();
-
-            outputStreamConsumer.join();
-            errorStreamConsumer.join();
+            processes.remove(id);
         } catch(IOException | InterruptedException e) {
+            processes.remove(id);
             throw new DownloadFailedException();
         }
 
         return processResult;
+    }
+
+    public Process getProcessById(String id) {
+        return processes.get(id);
+    }
+
+    public void stopProcessById(String id, boolean force) {
+        YtdlpDownloadProcess process = processes.get(id);
+        if(process != null) {
+            process.getExecutorService().shutdownNow();
+            if(force) {
+                process.getProcess().destroyForcibly();
+            } else {
+                process.getProcess().destroy();
+            }
+        }
+    }
+
+    public void stopProcessById(String id) {
+        stopProcessById(id, true);
     }
     
 }
