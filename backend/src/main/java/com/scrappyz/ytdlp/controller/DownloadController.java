@@ -20,7 +20,6 @@ import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.dto.DownloadCancelResponse;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
-import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
 import com.scrappyz.ytdlp.service.DownloadService;
 
 import lombok.RequiredArgsConstructor;
@@ -88,11 +87,7 @@ public class DownloadController {
         response.setStatus("success");
         response.setMessage("Request was cancelled successfully");
 
-        if(!downloadService.isProcessExist(requestId)) {
-            throw new InvalidProcessException("Process with request ID \"" + requestId + "\" could not be found");
-        }
-
-        downloadService.cancelProcess(requestId);
+        downloadService.cancelDownload(requestId);
 
         return ResponseEntity.ok().body(response);
     }

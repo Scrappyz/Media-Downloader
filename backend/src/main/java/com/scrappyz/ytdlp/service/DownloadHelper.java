@@ -11,7 +11,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,10 +60,6 @@ public class DownloadHelper {
     private static final HashSet<String> audioCodec = new HashSet<>(
         Arrays.asList("flac", "alac", "wav", "aiff", "opus", "vorbis", "aac", "mp4a", "m4a", "mp3", "ac4", "eac3", "ac3", "dts")
     );
-
-    private final Set<String> processes = new ConcurrentHashMap<>().newKeySet(); // To be removed later
-
-    private final Set<String> cancelled = new ConcurrentHashMap<>().newKeySet(); // To be removed later
 
     private final ConcurrentHashMap<String, String> resourceMap = new ConcurrentHashMap<>();
 
@@ -290,14 +285,12 @@ public class DownloadHelper {
 
             if(error != null) {
                 emitter.complete();
-                processes.remove(id);
                 return;
             }
 
         } catch(IOException e) {
             log.info("[DownloadHelper.download] Failed to send download failed status via SseEmitter");
             emitter.completeWithError(e);
-            processes.remove(id);
             return;
         }
 
@@ -309,7 +302,7 @@ public class DownloadHelper {
 
         resourceMap.put(id, outputName);
 
-        resourceHelper.cleanup(id, outputName, processes, cancelled, resourceMap); // Cleanup resources in set time
+        resourceHelper.cleanup(id, outputName, resourceMap); // Cleanup resources in set time
 
         log.info("[DownloadHelper.download] Download with ID " + id + " has finished");
 
@@ -481,21 +474,8 @@ public class DownloadHelper {
     }
     // ---HELPER METHODS---
 
-    public boolean isProcessExist(String id) {
-        return processes.contains(id);
-    }
-
-    public boolean addProcess(String id) {
-        return processes.add(id);
-    }
-
-    public boolean removeProcess(String id) {
-        return processes.remove(id);
-    }
-
-    public boolean cancelProcess(String id) {
-        cancelled.add(id);
-        return processes.remove(id);
+    public void cancelDownload(String id) {
+        downloadProcessHandler.stopProcessById(id, true);
     }
 
     public void addEmitter(String id, SseEmitter emitter) {
@@ -530,11 +510,6 @@ public class DownloadHelper {
         String resourceName = resourceMap.get(id);
         File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
 
-        if(cancelled.contains(id) || !resourceFile.exists()) {
-            log.info("[DownloadHelper.getResource] Either cancelled or does not exist");
-            throw new ResourceNotFoundException("Could not find resource '" + resourceName + "'");
-        }
-
         if(removeInResourceMap) {
             resourceMap.remove(id);
         }
@@ -564,9 +539,5 @@ public class DownloadHelper {
 
     public String getResourceMapAsString() {
         return resourceMap.keySet().toString();
-    }
-
-    public String getCancelledAsString() {
-        return cancelled.toString();
     }
 }

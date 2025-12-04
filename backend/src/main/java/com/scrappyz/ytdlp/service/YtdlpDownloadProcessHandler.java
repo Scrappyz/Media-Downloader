@@ -4,9 +4,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -32,11 +32,9 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
 
             Process process = pb.start();
 
-            processes.put(id, new YtdlpDownloadProcess());
-            
+            processes.put(id, new YtdlpDownloadProcess(process, Executors.newFixedThreadPool(2)));
+
             YtdlpDownloadProcess downloadProcess = processes.get(id);
-            downloadProcess.setProcess(process);
-            downloadProcess.setExecutorService(Executors.newFixedThreadPool(2));
 
             downloadProcess.getExecutorService().execute(() -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -80,6 +78,12 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                 }
             });
 
+            int exitCode = process.waitFor();
+
+            if(exitCode != 0) {
+                throw new DownloadFailedException();
+            }
+
             processes.remove(id);
         } catch(IOException | InterruptedException e) {
             processes.remove(id);
@@ -89,24 +93,70 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
         return processResult;
     }
 
-    public Process getProcessById(String id) {
+    public YtdlpDownloadProcess getProcessById(String id) {
         return processes.get(id);
     }
 
     public void stopProcessById(String id, boolean force) {
-        YtdlpDownloadProcess process = processes.get(id);
-        if(process != null) {
-            process.getExecutorService().shutdownNow();
-            if(force) {
-                process.getProcess().destroyForcibly();
-            } else {
-                process.getProcess().destroy();
+        YtdlpDownloadProcess downloadProcess = processes.get(id);
+        if (downloadProcess == null) return;
+
+        Process p = downloadProcess.getProcess();
+        var exec = downloadProcess.getExecutorService();
+
+        // Close streams
+        try { 
+            if(p != null) p.getInputStream().close(); 
+        } catch (IOException ignore) {}
+
+        try { 
+            if(p != null) p.getErrorStream().close(); 
+        } catch (IOException ignore) {}
+
+        try { 
+            if(p != null) p.getOutputStream().close(); 
+        } catch (IOException ignore) {}
+
+        // Kill subprocesses
+        if(p != null) {
+            try {
+                p.toHandle().descendants().forEach(ph -> {
+                    try { 
+                        ph.destroyForcibly(); 
+                    } catch (Exception ignore) {}
+                });
+            } catch (UnsupportedOperationException ignored) {}
+        }
+
+        // Kill parent
+        if(p != null) {
+            if(force) p.destroyForcibly();
+            else p.destroy();
+        }
+
+        // Stop executor
+        if(exec != null) {
+            exec.shutdownNow();
+            try { 
+                exec.awaitTermination(2, TimeUnit.SECONDS); 
+            } catch (InterruptedException e) { 
+                Thread.currentThread().interrupt(); 
             }
         }
+
+        processes.remove(id);
     }
 
     public void stopProcessById(String id) {
         stopProcessById(id, true);
     }
+
+    public boolean hasProcess(String id) {
+        return processes.containsKey(id);
+    }
     
 }
+// Shoulder: 19 inches
+// Length: 24 inches
+// Arm: 13 inches
+// Waist: 38 inches
