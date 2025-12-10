@@ -15,8 +15,9 @@ import ProgressBar from './components/ProgressBar';
 interface DownloadRequest {
   requestType: string | undefined,
   url: string,
-  videoQuality?: number,
+  videoQuality?: string | number,
   videoFormat?: string,
+  audioQuality?: string | number,
   audioFormat?: string,
   outputName?: string
 };
@@ -61,6 +62,7 @@ function App() {
       url: "",
       videoQuality: "Best",
       videoFormat: "Default",
+      audioQuality: "Best",
       audioFormat: "Default",
       outputName: ""
     },
@@ -101,10 +103,21 @@ function App() {
       if(values.audioFormat !== "Default") {
         request.audioFormat = values.audioFormat;
       }
+
+      if(values.audioQuality !== "Best" && values.audioQuality !== "Worse") {
+        request.audioQuality = parseInt(values.audioQuality);
+      } else {
+        request.audioQuality = values.audioQuality;
+      }
     } else {
-      request.videoQuality = parseInt(values.videoQuality);
       if(values.videoFormat !== "Default") {
         request.videoFormat = values.videoFormat;
+      }
+
+      if(values.videoQuality !== "Best" && values.videoQuality !== "Worst") {
+        request.videoQuality = parseInt(values.videoQuality);
+      } else {
+        request.videoQuality = values.videoQuality;
       }
     }
 
@@ -114,9 +127,11 @@ function App() {
   const reset = () => {
     setApiError(null);
     setRequestId(null);
+    setDownloadStatus(null);
     setIsDownloaded(false);
     setIsSubmitted(false);
     setIsCancelled(false);
+    setDownloadProgress(0);
   }
 
   const handleSubmit = async (values: FormValues): Promise<any> => {

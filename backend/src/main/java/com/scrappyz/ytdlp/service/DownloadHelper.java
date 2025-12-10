@@ -360,7 +360,7 @@ public class DownloadHelper {
         if(audQuality == null || audQuality.isEmpty()) {
             return "best";
         }
-        
+
         audQuality = audQuality.trim().toLowerCase();
 
         if(audQuality.equals("best")) {
@@ -416,8 +416,7 @@ public class DownloadHelper {
         return audioFormat;
     }
 
-    private String resolveCommandFormat(RequestType type, Site site, String videoFormat, String videoQuality, String audioQuality, String audioFormat) {
-        
+    private String resolveCommandFormat(RequestType type, Site site, String vidFormat, String vidQuality, String audQuality, String audFormat) {
         boolean isVideo = (type == RequestType.VIDEO || type == RequestType.VIDEO_ONLY);
         String formatType = "best";
 
@@ -432,27 +431,34 @@ public class DownloadHelper {
         String format = formatType;
 
         if(isVideo) {
-            format += String.format("[height<=%s]", videoQuality);
-
-            if(!videoFormat.equals("default")) {
-                format += String.format("[ext=%s]", videoFormat);
+            if(vidQuality.equals("best")) {
+                format += "";
+            } else if(vidQuality.equals("worst")) {
+                int lowestQuality = videoQuality.first();
+                format += String.format("[height<=%s]", lowestQuality);
+            } else {
+                format += String.format("[height<=%s]", vidQuality);
+            }
+            
+            if(!vidFormat.equals("default")) {
+                format += String.format("[ext=%s]", vidFormat);
             }
         } else { // Audio only
-            if(audioFormat.equals("default")) {
-                if(audioQuality.equals("best")) {
+            if(audFormat.equals("default")) {
+                if(audQuality.equals("best")) {
                     format = "bestaudio[ext=flac]/bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio";
-                } else if(audioQuality.equals("worst")) {
+                } else if(audQuality.equals("worst")) {
                     format = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", 128, 128);
                 } else {
-                    format = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", audioQuality, audioQuality);
+                    format = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", audQuality, audQuality);
                 }
             } else {
-                if(audioQuality.equals("best")) {
-                    format = String.format("bestaudio[ext=%s]", audioFormat);
-                } else if(audioQuality.equals("worst")) {
-                    format = String.format("bestaudio[ext=%s][abr<=%s]", audioFormat, 128);
+                if(audQuality.equals("best")) {
+                    format = String.format("bestaudio[ext=%s]", audFormat);
+                } else if(audQuality.equals("worst")) {
+                    format = String.format("bestaudio[ext=%s][abr<=%s]", audFormat, 128);
                 } else {
-                    format = String.format("bestaudio[ext=%s][abr<=%s]", audioFormat, audioQuality);
+                    format = String.format("bestaudio[ext=%s][abr<=%s]", audFormat, audQuality);
                 }
             }
         }
