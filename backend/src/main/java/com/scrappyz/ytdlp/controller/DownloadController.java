@@ -76,6 +76,9 @@ public class DownloadController {
 
         headers.add(HttpHeaders.CONTENT_DISPOSITION, contentAttachment);
         headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE);
+        headers.add(HttpHeaders.CONTENT_LENGTH, Long.toString(resource.getFile().length()));
+
+        log.info("[DownloadController.getResource] Returning content with length " + resource.getFile().length());
 
         return ResponseEntity.ok().headers(headers).body(resource);
     }

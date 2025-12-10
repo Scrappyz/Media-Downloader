@@ -39,6 +39,8 @@ function App() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [filename, setFilename] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const { status, progress } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}`) : null});
 
   const mediaTypes: string[] = ["Video", "Video Only", "Audio Only"];
@@ -194,7 +196,8 @@ function App() {
 
     try {
       const response = await fetch(url, {
-        method: "GET"
+        method: "GET",
+        headers: { "Accept": "application/octet-stream" }
       });
 
       if(!response.ok) {
@@ -204,8 +207,40 @@ function App() {
 
       const contentDisposition = response.headers.get("Content-Disposition");
       const filename = parseFilenameFromContentDisposition(contentDisposition);
-      // console.log("Filename:", filename);
-      const blobUrl = window.URL.createObjectURL(await response.blob());
+
+      if(!response.body) {
+        const blobUrl = window.URL.createObjectURL(await response.blob());
+        const a = document.createElement("a");
+        a.href = blobUrl;
+
+        if(!filename) {
+          throw new Error("No file returned");
+        }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      const contentLength = response.headers.get('Content-Length');
+      let receivedLength = 0;
+      const chunks = [];
+
+      while(true) {
+        const {done, value} = await reader.read();
+        if(done) break;
+        chunks.push(value);
+        receivedLength += value.length;
+        setDownloadProgress(prev => prev = Math.floor((receivedLength / (contentLength ? parseInt(contentLength) : 1)) * 100));
+        // console.log(`Received ${receivedLength} of ${contentLength}: ${percentage}%`);
+      }
+
+      const blob = new Blob(chunks);
+      const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
 
@@ -218,10 +253,12 @@ function App() {
       a.click();
       a.remove();
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+      
     } catch(error: any) {
       setApiError(error.message);
     } finally {
       setIsDownloaded(false);
+      setDownloadProgress(0);
     }
   };
 
@@ -237,7 +274,14 @@ function App() {
     setIsSubmitted(false);
   }, [status]);
 
-  let progressBarMessage = (progress > 0) ? `Downloading: ${progress}%` : "Pending...";
+  useEffect(() => {
+    setDownloadProgress(prev => prev = progress);
+  }, [progress])
+
+  let progressBarMessage = (downloadProgress > 0) ? `Downloading: ${downloadProgress}%` : "Pending...";
+  if(isDownloaded) { // 2nd phase of download (file download)
+    progressBarMessage = (downloadProgress > 0) ? `Uploading: ${downloadProgress}%` : "Uploading to user...";
+  }
 
   return (
     <MantineProvider defaultColorScheme="light">
@@ -281,12 +325,17 @@ function App() {
               (isSubmitted) && (
                 <>
                   <Button type='button' bg={color.light[0]} disabled={isCancelled} onClick={cancelRequest}>Cancel</Button>
-                  <ProgressBar progress={progress} message={progressBarMessage} style={{fillColor: color.light[0]}} />
+                  <ProgressBar progress={downloadProgress} message={progressBarMessage} style={{fillColor: color.light[0]}} />
                 </>
               )
             }
             {
-              downloadStatus === "success" && (
+              (isDownloaded) && (
+                <ProgressBar progress={downloadProgress} message={progressBarMessage} style={{fillColor: color.light[0]}} />
+              )
+            }
+            {
+              downloadStatus === "success" && !isDownloaded && (
                 <Button type='button' disabled={isDownloaded} bg={color.light[0]} onClick={() => downloadFile()}>Download</Button>
               )
             }
