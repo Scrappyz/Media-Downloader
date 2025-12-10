@@ -39,14 +39,14 @@ function App() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
-  const [filename, setFilename] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const { status, progress } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}`) : null});
 
   const mediaTypes: string[] = ["Video", "Video Only", "Audio Only"];
-  const videoQualities: string[] = ["144p", "240p", "360p", "480p", "720p", "1080p", "2160p"];
-  const videoFormats: string[] = ["mp4", "mkv"];
-  const audioFormats: string[] = ["mp3", "m4a", "wav", "flac"];
+  const videoQualities: string[] = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"];
+  const videoFormats: string[] = ["mp4"];
+  const audioQualities: string[] = ["320kbps", "256kbps", "192kbps", "128kbps"];
+  const audioFormats: string[] = [];
 
   const mediaTypeMap = new Map<string, string>([
     ["Video", "video"],
@@ -55,11 +55,11 @@ function App() {
   ]);
 
   const form = useForm({
-    mode: 'uncontrolled',
+    mode: 'controlled',
     initialValues: {
       type: "Video",
       url: "",
-      videoQuality: "720p",
+      videoQuality: "Best",
       videoFormat: "Default",
       audioFormat: "Default",
       outputName: ""
@@ -304,11 +304,14 @@ function App() {
             {
               isVideo ? (
                 <Group justify='space-between'>
-                  <NativeSelect w='45%' {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={videoQualities} />
+                  <NativeSelect w='45%' {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={["Best", ...videoQualities, "Worst"]} />
                   <NativeSelect w='45%' {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={["Default", ...videoFormats]} />
                 </Group>
               ) : (
-                <NativeSelect {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={["Default", ...audioFormats]} />
+                <Group justify='space-between'>
+                  <NativeSelect w='45%' {...form.getInputProps('audioQuality')} label='Audio Quality' withAsterisk key={form.key("audioQuality")} data={["Best", ...audioQualities, "Worse"]} />
+                  <NativeSelect w='45%' {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={["Default", ...audioFormats]} />
+                </Group>
               )
             }
             <TextInput {...form.getInputProps('outputName')}

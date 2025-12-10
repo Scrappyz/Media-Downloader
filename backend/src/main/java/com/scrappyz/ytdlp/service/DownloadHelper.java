@@ -56,6 +56,10 @@ public class DownloadHelper {
         Arrays.asList(144, 240, 360, 480, 720, 1080, 2140) // height in pixels (p)
     );
 
+    private static final SortedSet<Integer> audioQuality = new TreeSet<>(
+        Arrays.asList(128, 192, 256, 320) // bitrate in kbps
+    );
+
     private static final HashSet<String> audioCodec = new HashSet<>(
         Arrays.asList("flac", "alac", "wav", "aiff", "opus", "vorbis", "aac", "mp4a", "m4a", "mp3", "ac4", "eac3", "ac3", "dts")
     );
@@ -174,15 +178,12 @@ public class DownloadHelper {
         String url = request.getUrl();
         String type = request.getRequestType();
         String vidFormat = resolveVideoFormat(request.getVideoFormat()); 
-        int vidQuality = resolveVideoQuality(request.getVideoQuality());
+        String vidQuality = resolveVideoQuality(request.getVideoQuality());
+        String audQuality = resolveAudioQuality(request.getAudioQuality());
         String audFormat = resolveAudioFormat(request.getAudioFormat());
 
         if(url.isEmpty()) {
             throw new InvalidUrlException("The URL provided is empty");
-        }
-
-        if(vidQuality < 0) {
-            vidQuality = 360;
         }
 
         Site site = parseSite(url);
@@ -194,7 +195,7 @@ public class DownloadHelper {
         boolean isVideoOnly = t == RequestType.VIDEO_ONLY;
         boolean isAudioOnly = t == RequestType.AUDIO_ONLY;
 
-        String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audFormat);
+        String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audQuality, audFormat);
         log.info("[DownloadHelper.download] Command Format: " + format);
 
         Path outputPath = paths.getDownloadPath().resolve(id).normalize();
@@ -311,13 +312,30 @@ public class DownloadHelper {
     }
 
     // ---HELPER METHODS---
-    public static int resolveVideoQuality(int vidQuality) {
+    public static String resolveVideoQuality(String vidQuality) {
+        if(vidQuality == null || vidQuality.isEmpty()) {
+            return "best";
+        }
+
+        vidQuality = vidQuality.trim().toLowerCase();
+
+        if(vidQuality.equals("best")) {
+            return "best";
+        }
+
+        if(vidQuality.equals("worst")) {
+            return "worst";
+        }
+
+        int numericQuality = Integer.parseInt(vidQuality);
+        vidQuality = String.valueOf(numericQuality);
+
         Iterator<Integer> iterator = videoQuality.iterator();
         int firstValue = iterator.next();
 
-        if(vidQuality < firstValue) return -1;
+        if(numericQuality < firstValue) return String.valueOf(firstValue);
 
-        if(videoQuality.contains(vidQuality)) return vidQuality;
+        if(videoQuality.contains(numericQuality)) return vidQuality;
 
         // Get the nearest video quality
         int prev = -1;
@@ -327,15 +345,59 @@ public class DownloadHelper {
                 continue;
             }
 
-            if(vidQuality > prev && vidQuality < i) {
-                vidQuality = prev;
+            if(numericQuality > prev && numericQuality < i) {
+                numericQuality = prev;
                 break;
             }
 
             prev = i;
         }
 
-        return vidQuality;
+        return String.valueOf(numericQuality);
+    }
+
+    public static String resolveAudioQuality(String audQuality) {
+        if(audQuality == null || audQuality.isEmpty()) {
+            return "best";
+        }
+        
+        audQuality = audQuality.trim().toLowerCase();
+
+        if(audQuality.equals("best")) {
+            return "best";
+        }
+
+        if(audQuality.equals("worst")) {
+            return "worst";
+        }
+
+        int numericQuality = Integer.parseInt(audQuality);
+        audQuality = String.valueOf(numericQuality);
+
+        Iterator<Integer> iterator = audioQuality.iterator();
+        int firstValue = iterator.next();
+
+        if(numericQuality < firstValue) return String.valueOf(firstValue);
+
+        if(audioQuality.contains(numericQuality)) return audQuality;
+
+        // Get the nearest video quality
+        int prev = -1;
+        for(int i : audioQuality) {
+            if(i == firstValue) {
+                prev = i;
+                continue;
+            }
+
+            if(numericQuality > prev && numericQuality < i) {
+                numericQuality = prev;
+                break;
+            }
+
+            prev = i;
+        }
+
+        return String.valueOf(numericQuality);
     }
 
     public static String resolveVideoFormat(String videoFormat) {
@@ -354,7 +416,7 @@ public class DownloadHelper {
         return audioFormat;
     }
 
-    private String resolveCommandFormat(RequestType type, Site site, String videoFormat, int videoQuality, String audioFormat) {
+    private String resolveCommandFormat(RequestType type, Site site, String videoFormat, String videoQuality, String audioQuality, String audioFormat) {
         
         boolean isVideo = (type == RequestType.VIDEO || type == RequestType.VIDEO_ONLY);
         String formatType = "best";
@@ -370,20 +432,32 @@ public class DownloadHelper {
         String format = formatType;
 
         if(isVideo) {
-            format += String.format("[height<=%d]", videoQuality);
+            format += String.format("[height<=%s]", videoQuality);
 
             if(!videoFormat.equals("default")) {
                 format += String.format("[ext=%s]", videoFormat);
             }
-        } else {
+        } else { // Audio only
             if(audioFormat.equals("default")) {
-                format = "bestaudio[ext=flac]/bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio";
+                if(audioQuality.equals("best")) {
+                    format = "bestaudio[ext=flac]/bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio";
+                } else if(audioQuality.equals("worst")) {
+                    format = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", 128, 128);
+                } else {
+                    format = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", audioQuality, audioQuality);
+                }
             } else {
-                format += String.format("[ext=%s]", audioFormat);
+                if(audioQuality.equals("best")) {
+                    format = String.format("bestaudio[ext=%s]", audioFormat);
+                } else if(audioQuality.equals("worst")) {
+                    format = String.format("bestaudio[ext=%s][abr<=%s]", audioFormat, 128);
+                } else {
+                    format = String.format("bestaudio[ext=%s][abr<=%s]", audioFormat, audioQuality);
+                }
             }
         }
 
-        if(isVideo && site != Site.YOUTUBE) {
+        if(isVideo && site != Site.YOUTUBE) { // For non-Youtube sites
             format += "/" + formatType;
         }
 

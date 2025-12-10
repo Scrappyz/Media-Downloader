@@ -9,7 +9,8 @@ public class DownloadRequest {
     private String requestType;
     private String url;
     private String videoFormat;
-    private int videoQuality;
+    private String videoQuality;
+    private String audioQuality;
     private String audioFormat;
 
 }
