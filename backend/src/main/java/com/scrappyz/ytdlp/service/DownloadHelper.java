@@ -251,13 +251,36 @@ public class DownloadHelper {
                     return parseError(line); // Or handle the error line as needed
                 }
             );
-        } catch(DownloadFailedException e) {
+        } catch(DownloadFailedException e) { // If something goes wrong with the download process or user cancelled
+            if(downloadProcessHandler.isProcessCancelled(id)) {
+                log.info("[DownloadHelper.download] Download with ID " + id + " was cancelled");
+                result.setStatus("cancelled");
+                result.setMessage("Download was cancelled");
+
+                try {
+                    emitter.send(SseEmitter.event()
+                        .name("status")
+                        .data(result)
+                    );
+                } catch(IOException ex) {
+                    log.info("[DownloadHelper.download] Failed to send download cancelled status via SseEmitter");
+                }
+
+                downloadProcessHandler.removeProcessById(id);
+                emitter.complete();
+                return;
+            }
+
             log.info("[DownloadHelper.download] Remove process with ID " + id + " because of error");
             throw new DownloadFailedException();
         }
 
-        ErrorCode error = processResult.getError();
+        downloadProcessHandler.removeProcessById(id);
 
+        // ========PROCESS COMPLETED SUCCESSFULLY========
+
+        // Handle errors
+        ErrorCode error = processResult.getError();
         try {
             if(error == ErrorCode.INVALID_URL) {
                 log.info("[DownloadHelper.download] Invalid URL");
@@ -294,6 +317,8 @@ public class DownloadHelper {
             return;
         }
 
+        // ========DOWNLOAD COMPLETED SUCCESSFULLY========
+
         outputName = processResult.getOutputName();
         log.info("[DownloadHelper.download] Output filename is '" + outputName + "'");
 
@@ -315,16 +340,16 @@ public class DownloadHelper {
             log.info("[DownloadHelper.download] Failed to send initial pending status via SseEmitter");
         }
 
-        result.setStatus("success");
+        // result.setStatus("success");
 
-        try {
-            emitter.send(SseEmitter.event()
-                .name("status")
-                .data(result) 
-            );
-        } catch(IOException e) {
-            log.info("[DownloadHelper.processLine] Failed to send progress update via SseEmitter");
-        }
+        // try {
+        //     emitter.send(SseEmitter.event()
+        //         .name("status")
+        //         .data(result) 
+        //     );
+        // } catch(IOException e) {
+        //     log.info("[DownloadHelper.processLine] Failed to send progress update via SseEmitter");
+        // }
 
         emitter.complete();
     }

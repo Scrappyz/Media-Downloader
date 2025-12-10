@@ -8,6 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -20,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<YtdlpProcessResult> {
+
+    private static final Logger log = LoggerFactory.getLogger(YtdlpDownloadProcessHandler.class);
 
     private final ConcurrentHashMap<String, YtdlpDownloadProcess> processes = new ConcurrentHashMap<>();
     
@@ -86,6 +90,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
 
             processes.remove(id);
         } catch(IOException | InterruptedException e) {
+            log.info("[YtdlpDownloadProcessHandler.runProcess] Download got interrupted");
             processes.remove(id);
             throw new DownloadFailedException();
         }
@@ -107,15 +112,21 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
         // Close streams
         try { 
             if(p != null) p.getInputStream().close(); 
-        } catch (IOException ignore) {}
+        } catch(IOException ignore) {
+            log.info("[YtdlpDownloadProcessHandler.stopProcessById] Input Stream Closed");
+        }
 
         try { 
             if(p != null) p.getErrorStream().close(); 
-        } catch (IOException ignore) {}
+        } catch(IOException ignore) {
+            log.info("[YtdlpDownloadProcessHandler.stopProcessById] Error Stream Closed");
+        }
 
         try { 
             if(p != null) p.getOutputStream().close(); 
-        } catch (IOException ignore) {}
+        } catch(IOException ignore) {
+            log.info("[YtdlpDownloadProcessHandler.stopProcessById] Output Stream Closed");
+        }
 
         // Kill subprocesses
         if(p != null) {
@@ -125,7 +136,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                         ph.destroyForcibly(); 
                     } catch (Exception ignore) {}
                 });
-            } catch (UnsupportedOperationException ignored) {}
+            } catch(UnsupportedOperationException ignored) {}
         }
 
         // Kill parent
@@ -144,7 +155,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
             }
         }
 
-        processes.remove(id);
+        processes.get(id).setCancelled(true);
     }
 
     public void stopProcessById(String id) {
@@ -153,6 +164,17 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
 
     public boolean hasProcess(String id) {
         return processes.containsKey(id);
+    }
+
+    public boolean isProcessCancelled(String id) {
+        YtdlpDownloadProcess downloadProcess = processes.get(id);
+        if(downloadProcess == null) return false;
+
+        return downloadProcess.isCancelled();
+    }
+
+    public void removeProcessById(String id) {
+        processes.remove(id);
     }
     
 }
