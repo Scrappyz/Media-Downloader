@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.config.PathProperties;
+import com.scrappyz.ytdlp.config.YtdlpConfig;
 import com.scrappyz.ytdlp.dto.ApiError;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResult;
@@ -47,6 +48,7 @@ public class DownloadHelper {
     private final ObjectProvider<DownloadProgressHelper> progressHelperProvider;
     
     private final PathProperties paths;
+    private final YtdlpConfig ytdlpConfig;
 
     private final DownloadResourceHelper resourceHelper;
     private final YtdlpDownloadProcessHandler downloadProcessHandler;
@@ -202,6 +204,9 @@ public class DownloadHelper {
 
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
+        if(ytdlpConfig.isUseCookies()) {
+            commands.addAll(Arrays.asList("--cookies-from-browser", ytdlpConfig.getBrowserCookies(), "--js-runtime", ytdlpConfig.getJsRuntime()));
+        }
         commands.addAll(Arrays.asList("-f", format));
         commands.addAll(Arrays.asList(url, "-P", outputPath.toString()));
         commands.addAll(Arrays.asList("-o", id + ".%(ext)s", "--no-warnings", "--newline"));

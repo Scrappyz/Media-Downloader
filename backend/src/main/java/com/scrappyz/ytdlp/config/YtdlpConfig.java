@@ -6,10 +6,13 @@ import lombok.Getter;
 import lombok.Setter;
 
 @ConfigurationProperties(prefix = "ytdlp")
-@Getter @Setter
+@Setter @Getter
 public class YtdlpConfig {
     
     private boolean autoUpdate;
+    private boolean useCookies;
+    private String browserCookies;
+    private String jsRuntime;
     
     public boolean isAutoUpdate() {
         return autoUpdate;
