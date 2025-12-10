@@ -1,12 +1,11 @@
 package com.scrappyz.ytdlp.service;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,26 +28,24 @@ public class DownloadResourceHelper {
     private Duration resourceExpiryTime;
     
     @Async("resourceExecutor")
-    public CompletableFuture<Boolean> cleanup(String id, String resourceName, ConcurrentHashMap<String, String> resourceMap) { // Delete downloaded resource after a certain time. Also cleanup
-        
-        boolean isResourceMapped = resourceMap.containsKey(id);
+    public void cleanup(String id) { // Delete downloaded resource after a certain time. Also cleanup
 
         long expiryMillis = resourceExpiryTime.toMillis();
 
-        if(isResourceMapped) {
-            log.info("[DownloadResourceHelper.cleanup] Resource ID '" + id + "' expired");
-            resourceMap.remove(id);
-        }
-
-        Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
+        Path resourcePath = paths.getDownloadPath().resolve(id).normalize();
 
         try {
-            boolean deleted = Files.deleteIfExists(resourcePath);
-            log.info("Resource \"" + resourceName + "\" expired");
-            return CompletableFuture.completedFuture(deleted);
+            log.info("[DownloadResourceHelper.cleanup] Waiting " + expiryMillis + "ms before deleting resource '" + id + "'");
+            Thread.sleep(expiryMillis);
+        } catch(InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            log.info("[DownloadResourceHelper.cleanup] '" + id + "' has expired");
+            FileUtils.deleteDirectory(new File(resourcePath.toString()));
         } catch(IOException e) {
             e.printStackTrace();
-            return CompletableFuture.failedFuture(e);
         }
     }
 }

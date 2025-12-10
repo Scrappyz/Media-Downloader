@@ -74,11 +74,7 @@ public class DownloadService {
     }
 
     public FileSystemResource getResource(String id) {
-        return downloadHelper.getResource(id, true);
-    }
-
-    public FileSystemResource getResource(String id, boolean removeInResourceMap) {
-        return downloadHelper.getResource(id, removeInResourceMap);
+        return downloadHelper.getResource(id);
     }
 
     public SseEmitter getEmitter(String id) {

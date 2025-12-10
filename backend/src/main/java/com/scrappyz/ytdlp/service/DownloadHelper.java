@@ -2,7 +2,6 @@ package com.scrappyz.ytdlp.service;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,8 +59,6 @@ public class DownloadHelper {
     private static final HashSet<String> audioCodec = new HashSet<>(
         Arrays.asList("flac", "alac", "wav", "aiff", "opus", "vorbis", "aac", "mp4a", "m4a", "mp3", "ac4", "eac3", "ac3", "dts")
     );
-
-    private final ConcurrentHashMap<String, String> resourceMap = new ConcurrentHashMap<>();
 
     private final ConcurrentHashMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
@@ -228,10 +225,12 @@ public class DownloadHelper {
 
         log.info("[DownloadHelper.download] Got output name '" + outputName + "'");
 
+        Path outputPath = paths.getDownloadPath().resolve(id).normalize();
+
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
         commands.addAll(Arrays.asList("-f", format));
-        commands.addAll(Arrays.asList(url, "-P", paths.getDownloadPath().toString()));
+        commands.addAll(Arrays.asList(url, "-P", outputPath.toString()));
         commands.addAll(Arrays.asList("-o", outputName + ".%(ext)s", "--no-warnings", "--newline"));
 
         log.info("[DownloadHelper.download] Download Commands: " + String.join(" ", commands));
@@ -326,9 +325,7 @@ public class DownloadHelper {
         result.setStatus(RequestStatus.SUCCESS.getString());
         result.setMessage("Download has finished");
 
-        resourceMap.put(id, outputName);
-
-        resourceHelper.cleanup(id, outputName, resourceMap); // Cleanup resources in set time
+        resourceHelper.cleanup(id); // Cleanup resources in set time
 
         log.info("[DownloadHelper.download] Download with ID " + id + " has finished");
 
@@ -340,17 +337,6 @@ public class DownloadHelper {
         } catch(IOException e) {
             log.info("[DownloadHelper.download] Failed to send initial pending status via SseEmitter");
         }
-
-        // result.setStatus("success");
-
-        // try {
-        //     emitter.send(SseEmitter.event()
-        //         .name("status")
-        //         .data(result) 
-        //     );
-        // } catch(IOException e) {
-        //     log.info("[DownloadHelper.processLine] Failed to send progress update via SseEmitter");
-        // }
 
         emitter.complete();
     }
@@ -467,37 +453,6 @@ public class DownloadHelper {
 
         return Site.UNKNOWN;
     }
-
-    private String parseFilenameFromOutputStream(List<String> output) {
-        if(output.isEmpty()) {
-            return null;
-        }
-
-        String temp = "";
-        int i = output.size() - 1;
-        while(i >= 0) {
-            temp = output.get(i);
-
-            if(temp.startsWith("[download] Destination:")) {
-                break;
-            }
-
-            i--;
-        }
-
-        if(i < 0) {
-            return null;
-        }
-
-        int startIndex = temp.lastIndexOf('\\');
-
-        if(startIndex < 0) {
-            startIndex = temp.lastIndexOf('/');
-        }
-
-        String filename = temp.substring(startIndex + 1);
-        return filename;
-    }
     // ---HELPER METHODS---
 
     public void cancelDownload(String id) {
@@ -526,44 +481,20 @@ public class DownloadHelper {
         return emitters.get(id);
     }
 
-    public FileSystemResource getResource(String id, boolean removeInResourceMap) throws ResourceNotFoundException {
-
-        if(!resourceMap.containsKey(id)) {
-            log.info("[DownloadHelper.getResource] Not in resourceMap");
-            throw new ResourceNotFoundException("Could not find resource with ID of " + id);
-        }
-
-        String resourceName = resourceMap.get(id);
-        File resourceFile = paths.getDownloadPath().resolve(resourceName).normalize().toFile();
-
-        if(removeInResourceMap) {
-            resourceMap.remove(id);
-        }
-
-        return new FileSystemResource(resourceFile);
-    }
-
     public FileSystemResource getResource(String id) throws ResourceNotFoundException {
-        return getResource(id, true);
-    }
+        Path resourcePath = paths.getDownloadPath().resolve(id).normalize();
 
-    public boolean removeResource(String id) {
-        String resourceName = resourceMap.get(id);
-        Path resourcePath = paths.getDownloadPath().resolve(resourceName).normalize();
-        boolean deleted;
-
-        try {
-            deleted = Files.deleteIfExists(resourcePath);
-        } catch(IOException e) {
-            return false;
+        File directory = new File(resourcePath.toString());
+        if(!directory.exists() || !directory.isDirectory()) {
+            throw new ResourceNotFoundException("[DownloadHelper.getResource] Resource with request ID '" + id + "' could not be found");
         }
 
-        resourceMap.remove(id);
+        File[] files = directory.listFiles();
+        if(files == null || files.length == 0) {
+            throw new ResourceNotFoundException("[DownloadHelper.getResource] Resource with request ID '" + id + "' has no files");
+        }
 
-        return deleted;
-    }
-
-    public String getResourceMapAsString() {
-        return resourceMap.keySet().toString();
+        FileSystemResource resource = new FileSystemResource(files[0]);
+        return resource;
     }
 }
