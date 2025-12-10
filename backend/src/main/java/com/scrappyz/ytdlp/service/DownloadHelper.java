@@ -144,31 +144,6 @@ public class DownloadHelper {
         }
     };
 
-    public static class ProcessResult {
-        private String outputName;
-        private ErrorCode error;
-
-        public String getOutputName() {
-            return outputName;
-        }
-
-        public void setOutputName(String outputName) {
-            this.outputName = outputName;
-        }
-
-        public ErrorCode getError() {
-            return error;
-        }
-
-        public void setError(ErrorCode error) {
-            this.error = error;
-        }
-
-        public boolean hasOutputName() {
-            return outputName != null && !outputName.isEmpty();
-        }
-    }
-
     // Methods:
     // For video + audio: yt-dlp -f best[ext=mp4][height<=720] <url>
     // For video only: yt-dlp -f bestvideo[ext=mp4][height<=720] <url>
@@ -201,7 +176,6 @@ public class DownloadHelper {
         String vidFormat = resolveVideoFormat(request.getVideoFormat()); 
         int vidQuality = resolveVideoQuality(request.getVideoQuality());
         String audFormat = resolveAudioFormat(request.getAudioFormat());
-        String outputName = id;
 
         if(url.isEmpty()) {
             throw new InvalidUrlException("The URL provided is empty");
@@ -223,15 +197,13 @@ public class DownloadHelper {
         String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audFormat);
         log.info("[DownloadHelper.download] Command Format: " + format);
 
-        log.info("[DownloadHelper.download] Got output name '" + outputName + "'");
-
         Path outputPath = paths.getDownloadPath().resolve(id).normalize();
 
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
         commands.addAll(Arrays.asList("-f", format));
         commands.addAll(Arrays.asList(url, "-P", outputPath.toString()));
-        commands.addAll(Arrays.asList("-o", outputName + ".%(ext)s", "--no-warnings", "--newline"));
+        commands.addAll(Arrays.asList("-o", id + ".%(ext)s", "--no-warnings", "--newline"));
 
         log.info("[DownloadHelper.download] Download Commands: " + String.join(" ", commands));
 
@@ -318,9 +290,6 @@ public class DownloadHelper {
         }
 
         // ========DOWNLOAD COMPLETED SUCCESSFULLY========
-
-        outputName = processResult.getOutputName();
-        log.info("[DownloadHelper.download] Output filename is '" + outputName + "'");
 
         result.setStatus(RequestStatus.SUCCESS.getString());
         result.setMessage("Download has finished");

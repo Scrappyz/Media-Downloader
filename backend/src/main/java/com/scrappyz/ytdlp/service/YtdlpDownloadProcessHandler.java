@@ -44,18 +44,6 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        if(!processResult.hasOutputName() && line.startsWith("[download] Destination:")) {
-                            int startIndex = line.lastIndexOf('\\');
-
-                            if(startIndex < 0) {
-                                startIndex = line.lastIndexOf('/');
-                            }
-
-                            String filename = line.substring(startIndex + 1);
-                            processResult.setOutputName(filename);
-                            continue;
-                        }
-
                         try {
                             processLineHandler.handle(line, emitter); // Pass null or appropriate SseEmitter
                         } catch (Exception e) {
