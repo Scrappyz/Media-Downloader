@@ -31,7 +31,7 @@ export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressDa
         eventSource.addEventListener("status", (event: MessageEvent) => {
             const parsedData = JSON.parse(event.data);
             console.log("Status Update:", parsedData);
-            if(parsedData.status === "success") {
+            if(parsedData.status === "success" || parsedData.status === "cancelled") {
                 reset();
                 eventSource.close();
             }
