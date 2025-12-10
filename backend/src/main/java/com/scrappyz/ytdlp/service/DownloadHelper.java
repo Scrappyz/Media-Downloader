@@ -236,8 +236,8 @@ public class DownloadHelper {
 
         log.info("[DownloadHelper.download] Download Commands: " + String.join(" ", commands));
 
+        // Run the download process
         YtdlpProcessResult processResult = new YtdlpProcessResult();
-
         try {
             DownloadProgressHelper progressHelper = progressHelperProvider.getObject();
             processResult = downloadProcessHandler.runProcess(
@@ -272,10 +272,11 @@ public class DownloadHelper {
             }
 
             log.info("[DownloadHelper.download] Remove process with ID " + id + " because of error");
+            downloadProcessHandler.removeProcessById(id);
             throw new DownloadFailedException();
         }
 
-        downloadProcessHandler.removeProcessById(id);
+        downloadProcessHandler.removeProcessById(id); // Remove the process from the map
 
         // ========PROCESS COMPLETED SUCCESSFULLY========
 
