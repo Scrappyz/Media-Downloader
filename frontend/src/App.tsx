@@ -55,7 +55,7 @@ function App() {
   ]);
 
   const form = useForm({
-    mode: 'controlled',
+    mode: 'uncontrolled',
     initialValues: {
       type: "Video",
       url: "",
