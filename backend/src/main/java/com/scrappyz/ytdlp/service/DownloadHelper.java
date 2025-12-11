@@ -248,6 +248,7 @@ public class DownloadHelper {
 
                 downloadProcessHandler.removeProcessById(id);
                 emitter.complete();
+                resourceHelper.removeResource(id); // Remove any partially downloaded resources
                 return;
             }
 

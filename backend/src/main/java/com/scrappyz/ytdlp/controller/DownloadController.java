@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import com.scrappyz.ytdlp.config.PathProperties;
+import com.github.f4b6a3.ulid.Ulid;
 import com.scrappyz.ytdlp.dto.DownloadCancelResponse;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
+import com.scrappyz.ytdlp.exception.custom.InvalidUlidException;
 import com.scrappyz.ytdlp.service.DownloadService;
+import com.scrappyz.ytdlp.utils.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,13 +34,7 @@ public class DownloadController {
     private final Logger log = LoggerFactory.getLogger(DownloadController.class);
 
     private final DownloadService downloadService;
-    private final PathProperties paths;
-    
-    @GetMapping("/hello")
-    public ResponseEntity<String> hello() {
-        // log.info(paths.getExecutablePath().toString());
-        return ResponseEntity.ok().body("fudge");
-    }
+    private final SecurityUtils securityUtils;
     
     @PostMapping
     public ResponseEntity<DownloadResponse> download(@RequestBody DownloadRequest request) {
@@ -49,12 +45,20 @@ public class DownloadController {
 
     @GetMapping("/{requestId}")
     public SseEmitter checkRequest(@PathVariable String requestId) {
+        if(!Ulid.isValid(requestId)) {
+            throw new InvalidUlidException();
+        }
+
         return downloadService.getEmitter(requestId); // Subscribe to SSE events for this request
     }
 
     @GetMapping("/{requestId}/file")
     public ResponseEntity<FileSystemResource> getResource(@PathVariable String requestId,
         @RequestParam(name = "output", required = false, defaultValue = "") String outputName) {
+
+        if(!Ulid.isValid(requestId)) {
+            throw new InvalidUlidException();
+        }
 
         HttpHeaders headers = new HttpHeaders();
         FileSystemResource resource;
@@ -85,6 +89,11 @@ public class DownloadController {
 
     @DeleteMapping("/{requestId}")
     public ResponseEntity<DownloadCancelResponse> cancelDownload(@PathVariable String requestId) {
+        
+        if(!Ulid.isValid(requestId)) {
+            throw new InvalidUlidException();
+        }
+
         DownloadCancelResponse response = new DownloadCancelResponse();
 
         response.setStatus("success");

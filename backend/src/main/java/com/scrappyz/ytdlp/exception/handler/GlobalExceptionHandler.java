@@ -6,14 +6,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.scrappyz.ytdlp.dto.ApiError;
 import com.scrappyz.ytdlp.exception.custom.ApiException;
+import com.scrappyz.ytdlp.exception.custom.DownloadCancelledException;
 import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
+import com.scrappyz.ytdlp.exception.custom.FailedProcessException;
+import com.scrappyz.ytdlp.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.exception.custom.FullDownloadQueueException;
 import com.scrappyz.ytdlp.exception.custom.InvalidProcessException;
 import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
-import com.scrappyz.ytdlp.exception.custom.FormatUnavailableException;
-import com.scrappyz.ytdlp.exception.custom.FailedProcessException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -68,6 +69,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(FailedProcessException.class)
     public ResponseEntity<ApiError> handleDownloadFail(FailedProcessException e) {
+        ApiError error = new ApiError(e.getCode(), e.getMessage());
+        return ResponseEntity.internalServerError().body(error);
+    }
+
+    @ExceptionHandler(DownloadCancelledException.class)
+    public ResponseEntity<ApiError> handleDownloadFail(DownloadCancelledException e) {
         ApiError error = new ApiError(e.getCode(), e.getMessage());
         return ResponseEntity.internalServerError().body(error);
     }

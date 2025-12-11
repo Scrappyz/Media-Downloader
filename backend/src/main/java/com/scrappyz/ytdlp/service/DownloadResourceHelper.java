@@ -48,4 +48,17 @@ public class DownloadResourceHelper {
             e.printStackTrace();
         }
     }
+
+    public boolean removeResource(String id) {
+        Path resourcePath = paths.getDownloadPath().resolve(id).normalize();
+
+        try {
+            log.info("[DownloadResourceHelper.removeResource] Deleting resource '" + id + "'");
+            FileUtils.deleteDirectory(new File(resourcePath.toString()));
+            return true;
+        } catch(IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
