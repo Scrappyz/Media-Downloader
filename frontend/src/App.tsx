@@ -381,28 +381,45 @@ function App() {
         </form>
       </Flex>
       <Flex mb="100px" pl="10%" pr="10%" direction={isMobile ? "column" : "row"} justify={isMobile ? "center" : "space-around"} gap="lg">
-        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 2px lightblue"}}>
+        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"}}>
+          <Card.Section>
+            <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
+              <Title order={3}>About</Title>
+            </Flex>
+          </Card.Section>
+          <Card.Section style={{overflowY: "auto"}}>
+            <Flex direction="column" gap="sm">
+              <Text size="sm">A <strong>full-stack web app</strong> for downloading videos or audio from <strong>multiple platforms</strong>. Built with <strong>React</strong> and <strong>Spring Boot</strong>, it features a mobile-first frontend and a multi-threaded backend to handle concurrent processing. The backend implements a <strong>REST API</strong> interface over <strong>yt-dlp</strong>, exposing its functionality via HTTP. The API is open-source and free to use.</Text>
+              <Text size="sm"><strong>Version:</strong> 1.0.0</Text>
+              <Text size="sm"><strong>Built with:</strong> React + Spring Boot</Text>
+              <Text size="sm"><strong>License:</strong> MIT</Text>
+              <Text size="sm"><strong>GitHub:</strong> <a href="https://github.com/Scrappyz/Media-Downloader">View Repo</a></Text>
+              <Text size="sm"><strong>Issues:</strong> <a href="https://github.com/Scrappyz/Media-Downloader/issues">Report Bug</a></Text>
+            </Flex>
+          </Card.Section>
+        </Card>
+        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"}}>
           <Card.Section>
             <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
               <Title order={3}>How To Use</Title>
             </Flex>
           </Card.Section>
           <Card.Section style={{overflowY: "auto"}}>
-            <ol>
-              <li><Text>Select the type of media you want to download (Video, Video Only, Audio Only).</Text></li>
-              <li><Text>Go to the site and get the link of the video you want to download. Use "Share &gt; Copy Link" instead of the URL up top.</Text></li>
-              <li><Text>Paste the URL of the media into the URL field.</Text></li>
-              <li><Text>Choose the desired quality and format options based on the media type.</Text></li>
-              <li><Text>Optionally, specify an output name for the downloaded file.</Text></li>
-              <li><Text>Click the "Start Download" button to initiate the download process.</Text></li>
-              <li><Text>Monitor the download progress using the progress bar.</Text></li>
-              <li><Text>Once the download is complete, click the "Get File" button to save the media to your device.</Text></li>
+            <ol style={{paddingLeft: "20px", lineHeight: "1.8"}}>
+              <li><Text size="sm"><strong>Choose Media Type:</strong> Select Video, Video Only, or Audio Only</Text></li>
+              <li><Text size="sm"><strong>Get the Link:</strong> Go to the site, click Share → Copy Link (not the browser URL)</Text></li>
+              <li><Text size="sm"><strong>Paste URL:</strong> Click the Paste button or manually enter the link</Text></li>
+              <li><Text size="sm"><strong>Set Quality:</strong> Choose your preferred quality and format</Text></li>
+              <li><Text size="sm"><strong>Name the File (Optional):</strong> Enter a custom filename or leave blank for default</Text></li>
+              <li><Text size="sm"><strong>Start Download:</strong> Click "Start Download" and wait for processing</Text></li>
+              <li><Text size="sm"><strong>Monitor Progress:</strong> Watch the progress bar in real-time</Text></li>
+              <li><Text size="sm"><strong>Save File:</strong> Click "Get File" when done</Text></li>
             </ol>
           </Card.Section>
         </Card>
-        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 2px lightblue"}}>
+        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"}}>
           <Card.Section>
-            <Flex direction="row" justify="center" align="center" gap="sm" mb="sm" mt="sm">
+            <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
               <Title order={3}>Supported Sites</Title>
             </Flex>
           </Card.Section>
@@ -412,21 +429,6 @@ function App() {
                 {
                   supportedSites.map((site, index) => <li key={index}>{site}</li>)
                 }
-              </ul>
-            </Flex>
-          </Card.Section>
-        </Card>
-        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 2px lightblue"}}>
-          <Card.Section>
-            <Flex direction="row" justify="center" align="center" gap="sm" mb="sm" mt="sm">
-              <Title order={3}>Documentation</Title>
-            </Flex>
-          </Card.Section>
-          <Card.Section style={{overflowY: "auto"}}>
-            <Flex direction="row" justify="center" pr="lg">
-              <ul>
-                <li><a href='https://github.com/Scrappyz/Media-Downloader'>GitHub</a></li>
-                <li><a href='https://github.com/user-attachments/assets/c486d42a-b81c-4d02-a74c-5bf06ac315c8'>Video Demo</a></li>
               </ul>
             </Flex>
           </Card.Section>
