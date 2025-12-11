@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Grid, Center } from '@mantine/core';
+import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Grid, Center, Card } from '@mantine/core';
 
-import { api } from './globals';
+import { api, supportedSites } from './globals';
 import { useForm } from '@mantine/form';
 
 import '@mantine/core/styles.css';
@@ -9,7 +9,9 @@ import { parseFilenameFromContentDisposition } from './utils';
 
 import { color } from './themes';
 
-import { useDownloadProgress } from './hooks/useDownloadProgress';
+import useDownloadProgress from './hooks/useDownloadProgress';
+import useWindowDimensions from './hooks/useWindowDimensions';
+
 import ProgressBar from './components/ProgressBar';
 
 interface DownloadRequest {
@@ -34,6 +36,8 @@ interface ApiError {
 }
 
 function App() {
+
+  const { height, width } = useWindowDimensions();
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -374,6 +378,43 @@ function App() {
             }
           </Flex>
         </form>
+      </Flex>
+      <Flex pl="10%" pr="10%" direction="row" justify="space-around" gap="lg">
+        <Card w="340px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 0px lightblue"}}>
+          <Card.Section>
+            <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
+              <Title order={3}>How To Use</Title>
+            </Flex>
+          </Card.Section>
+          <Card.Section>
+            <ol>
+              <li><Text>Select the type of media you want to download (Video, Video Only, Audio Only).</Text></li>
+              <li><Text>Go to the site and get the link of the video you want to download. Use "Share &gt; Copy Link" instead of the URL up top.</Text></li>
+              <li><Text>Paste the URL of the media into the URL field.</Text></li>
+              <li><Text>Choose the desired quality and format options based on the media type.</Text></li>
+              <li><Text>Optionally, specify an output name for the downloaded file.</Text></li>
+              <li><Text>Click the "Start Download" button to initiate the download process.</Text></li>
+              <li><Text>Monitor the download progress using the progress bar.</Text></li>
+              <li><Text>Once the download is complete, click the "Get File" button to save the media to your device.</Text></li>
+            </ol>
+          </Card.Section>
+        </Card>
+        <Card w="340px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 0px lightblue"}}>
+          <Card.Section>
+            <Flex direction="row" justify="center" align="center" gap="sm" mb="sm" mt="sm">
+              <Title order={3}>Supported Sites</Title>
+            </Flex>
+          </Card.Section>
+          <Card.Section>
+            <Flex direction="row" justify="center" pr="lg">
+              <ul>
+                {
+                  supportedSites.map((site, index) => <li key={index}>{site}</li>)
+                }
+              </ul>
+            </Flex>
+          </Card.Section>
+        </Card>
       </Flex>
     </MantineProvider>
   );

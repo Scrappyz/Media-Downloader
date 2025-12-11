@@ -4,3 +4,11 @@ const http: string = "https";
 const address: string = `${http}://downloader.micoapp.org`; // Use this for development
 // const port: string = "8080";
 export const api: string = `${address}/api/v1`
+
+export const supportedSites: string[] = [
+    "YouTube",
+    "Facebook",
+    "Instagram",
+    "Twitter / X",
+    "TikTok",
+]
