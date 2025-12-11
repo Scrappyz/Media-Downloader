@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Grid, Center, Card } from '@mantine/core';
+import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Grid, Center, Card, Box, Divider } from '@mantine/core';
 
 import { api, supportedSites } from './globals';
 import { useForm } from '@mantine/form';
@@ -308,7 +308,7 @@ function App() {
 
   return (
     <MantineProvider defaultColorScheme="light">
-      <Flex h="75vh" pb="30px" pl="10%" pr="10%" direction="column" justify="flex-end" align="center">
+      <Flex h="100vh" pb="30px" pl="10%" pr="10%" direction="column" justify="center" align="center">
         <Title order={2}>Media Downloader</Title>
         <form style={{width: 420, maxWidth: "100%"}} onSubmit={form.onSubmit((values) => handleSubmit(values))}>
           <Flex w='100%' direction="column" rowGap="lg">
@@ -380,62 +380,60 @@ function App() {
           </Flex>
         </form>
       </Flex>
-      <footer>
-        <Flex mb="100px" pl="10%" pr="10%" direction={isMobile ? "column" : "row"} justify={isMobile ? "center" : "space-around"} gap="lg">
-          <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"}}>
-            <Card.Section>
-              <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
-                <Title order={3}>About</Title>
-              </Flex>
-            </Card.Section>
-            <Card.Section style={{overflowY: "auto"}}>
-              <Flex direction="column" gap="sm">
-                <Text size="sm">A <strong>full-stack web app</strong> for downloading videos or audio from <strong>multiple platforms</strong>. Built with <strong>React</strong> and <strong>Spring Boot</strong>, it features a mobile-first frontend and a multi-threaded backend to handle concurrent processing. The backend implements a <strong>REST API</strong> interface over <strong>yt-dlp</strong>, exposing its functionality via HTTP. The API is open-source and free to use.</Text>
-                <Text size="sm"><strong>Version:</strong> 1.0.0</Text>
-                <Text size="sm"><strong>Built with:</strong> React + Spring Boot</Text>
-                <Text size="sm"><strong>License:</strong> MIT</Text>
-                <Text size="sm"><strong>GitHub:</strong> <a href="https://github.com/Scrappyz/Media-Downloader">View Repo</a></Text>
-                <Text size="sm"><strong>Issues:</strong> <a href="https://github.com/Scrappyz/Media-Downloader/issues">Report Bug</a></Text>
-              </Flex>
-            </Card.Section>
-          </Card>
-          <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"}}>
-            <Card.Section>
-              <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
-                <Title order={3}>How To Use</Title>
-              </Flex>
-            </Card.Section>
-            <Card.Section style={{overflowY: "auto"}}>
-              <ol style={{paddingLeft: "20px", lineHeight: "1.8"}}>
-                <li><Text size="sm"><strong>Choose Media Type:</strong> Select Video, Video Only, or Audio Only</Text></li>
-                <li><Text size="sm"><strong>Get the Link:</strong> Go to the site, click Share → Copy Link (not the browser URL)</Text></li>
-                <li><Text size="sm"><strong>Paste URL:</strong> Click the Paste button or manually enter the link</Text></li>
-                <li><Text size="sm"><strong>Set Quality:</strong> Choose your preferred quality and format</Text></li>
-                <li><Text size="sm"><strong>Name the File (Optional):</strong> Enter a custom filename or leave blank for default</Text></li>
-                <li><Text size="sm"><strong>Start Download:</strong> Click "Start Download" and wait for processing</Text></li>
-                <li><Text size="sm"><strong>Monitor Progress:</strong> Watch the progress bar in real-time</Text></li>
-                <li><Text size="sm"><strong>Save File:</strong> Click "Get File" when done</Text></li>
-              </ol>
-            </Card.Section>
-          </Card>
-          <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"}}>
-            <Card.Section>
-              <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
-                <Title order={3}>Supported Sites</Title>
-              </Flex>
-            </Card.Section>
-            <Card.Section style={{overflowY: "auto"}}>
-              <Flex direction="row" justify="center" pr="lg">
-                <ul>
-                  {
-                    supportedSites.map((site, index) => <li key={index}>{site}</li>)
-                  }
-                </ul>
-              </Flex>
-            </Card.Section>
-          </Card>
-        </Flex>
-      </footer>
+      <Flex mb="100px" pl="10%" pr="10%" direction={isMobile ? "column" : "row"} justify={isMobile ? "center" : "space-around"} gap="lg">
+        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"}}>
+          <Card.Section>
+            <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
+              <Title order={3}>About</Title>
+            </Flex>
+          </Card.Section>
+          <Card.Section style={{overflowY: "auto"}}>
+            <Flex direction="column" gap="sm">
+              <Text size="sm">A <strong>full-stack web app</strong> for downloading videos or audio from <strong>multiple platforms</strong>. Built with <strong>React</strong> and <strong>Spring Boot</strong>, it features a mobile-first frontend and a multi-threaded backend to handle concurrent processing. The backend implements a <strong>REST API</strong> interface over <strong>yt-dlp</strong>, exposing its functionality via HTTP. The API is open-source and free to use.</Text>
+              <Text size="sm"><strong>Version:</strong> 1.0.0</Text>
+              <Text size="sm"><strong>Built with:</strong> React + Spring Boot</Text>
+              <Text size="sm"><strong>License:</strong> MIT</Text>
+              <Text size="sm"><strong>GitHub:</strong> <a href="https://github.com/Scrappyz/Media-Downloader">View Repo</a></Text>
+              <Text size="sm"><strong>Issues:</strong> <a href="https://github.com/Scrappyz/Media-Downloader/issues">Report Bug</a></Text>
+            </Flex>
+          </Card.Section>
+        </Card>
+        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"}}>
+          <Card.Section>
+            <Flex direction="row" justify="center" align="center" gap="sm">
+              <Title order={3}>How To Use</Title>
+            </Flex>
+          </Card.Section>
+          <Card.Section style={{overflowY: "auto"}}>
+            <ol style={{paddingLeft: "20px", lineHeight: "1.8"}}>
+              <li><Text size="sm"><strong>Choose Media Type:</strong> Select Video, Video Only, or Audio Only</Text></li>
+              <li><Text size="sm"><strong>Get the Link:</strong> Go to the site, click Share → Copy Link (not the browser URL)</Text></li>
+              <li><Text size="sm"><strong>Paste URL:</strong> Click the Paste button or manually enter the link</Text></li>
+              <li><Text size="sm"><strong>Set Quality:</strong> Choose your preferred quality and format</Text></li>
+              <li><Text size="sm"><strong>Name the File (Optional):</strong> Enter a custom filename or leave blank for default</Text></li>
+              <li><Text size="sm"><strong>Start Download:</strong> Click "Start Download" and wait for processing</Text></li>
+              <li><Text size="sm"><strong>Monitor Progress:</strong> Watch the progress bar in real-time</Text></li>
+              <li><Text size="sm"><strong>Save File:</strong> Click "Get File" when done</Text></li>
+            </ol>
+          </Card.Section>
+        </Card>
+        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "rgba(0, 0, 0, 0.35) 0px 5px 15px"}}>
+          <Card.Section>
+            <Flex direction="row" justify="center" align="center" gap="sm">
+              <Title order={3}>Supported Sites</Title>
+            </Flex>
+          </Card.Section>
+          <Card.Section style={{overflowY: "auto"}}>
+            <Flex direction="row" justify="center" pr="lg">
+              <ul>
+                {
+                  supportedSites.map((site, index) => <li key={index}>{site}</li>)
+                }
+              </ul>
+            </Flex>
+          </Card.Section>
+        </Card>
+      </Flex>
     </MantineProvider>
   );
 }
