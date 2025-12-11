@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [0.3.0] - 2025/12/12
+## [1.0.0] - 2025/12/12
 
 ### Added
 - Added support for youtube music and higher audio quality of up to `256kbps`.
@@ -10,3 +10,6 @@
 
 ### Fixed
 - Fixed cancel feature being clunky.
+
+### Changed
+- Improved UI flow.
