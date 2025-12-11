@@ -207,6 +207,9 @@ public class DownloadHelper {
         if(ytdlpConfig.isUseCookies()) {
             commands.addAll(Arrays.asList("--cookies-from-browser", ytdlpConfig.getBrowserCookies(), "--js-runtime", ytdlpConfig.getJsRuntime()));
         }
+        if(request.isEmbedMetadata()) {
+            commands.addAll(Arrays.asList("--embed-metadata", "--embed-thumbnail", "--convert-thumbnails", "jpg"));
+        }
         commands.addAll(Arrays.asList("-f", format));
         commands.addAll(Arrays.asList(url, "-P", outputPath.toString()));
         commands.addAll(Arrays.asList("-o", id + ".%(ext)s", "--no-warnings", "--newline"));

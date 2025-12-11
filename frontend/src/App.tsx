@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Loader, Center } from '@mantine/core';
+import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Grid, Center } from '@mantine/core';
 
 import { api } from './globals';
 import { useForm } from '@mantine/form';
@@ -19,6 +19,7 @@ interface DownloadRequest {
   videoFormat?: string,
   audioQuality?: string | number,
   audioFormat?: string,
+  embedMetadata: boolean,
   outputName?: string
 };
 
@@ -64,6 +65,7 @@ function App() {
       videoFormat: "Default",
       audioQuality: "Best",
       audioFormat: "Default",
+      embedMetadata: "Yes",
       outputName: ""
     },
     validate: {
@@ -96,7 +98,8 @@ function App() {
   const transformRequest = (values: FormValues): DownloadRequest => {
     const request: DownloadRequest = {
       requestType: mediaTypeMap.get(values.type),
-      url: values.url
+      url: values.url,
+      embedMetadata: (values.embedMetadata === "Yes") ? true : false
     }
 
     if(values.type === "Audio Only") {
@@ -318,15 +321,17 @@ function App() {
             </Group>
             {
               isVideo ? (
-                <Group justify='space-between'>
-                  <NativeSelect w='45%' {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={["Best", ...videoQualities, "Worst"]} />
-                  <NativeSelect w='45%' {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={["Default", ...videoFormats]} />
-                </Group>
+                <Grid>
+                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={["Best", ...videoQualities, "Worst"]} /></Grid.Col>
+                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={["Default", ...videoFormats]} /></Grid.Col>
+                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('embedMetadata')} label='Embed Metadata' withAsterisk key={form.key("embedMetadata")} data={["Yes", "No"]} /></Grid.Col>
+                </Grid>
               ) : (
-                <Group justify='space-between'>
-                  <NativeSelect w='45%' {...form.getInputProps('audioQuality')} label='Audio Quality' withAsterisk key={form.key("audioQuality")} data={["Best", ...audioQualities, "Worse"]} />
-                  <NativeSelect w='45%' {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={["Default", ...audioFormats]} />
-                </Group>
+                <Grid>
+                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('audioQuality')} label='Audio Quality' withAsterisk key={form.key("audioQuality")} data={["Best", ...audioQualities, "Worse"]} /></Grid.Col>
+                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={["Default", ...audioFormats]} /></Grid.Col>
+                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('embedMetadata')} label='Embed Metadata' withAsterisk key={form.key("embedMetadata")} data={["Yes", "No"]} /></Grid.Col>
+                </Grid>
               )
             }
             <TextInput {...form.getInputProps('outputName')}

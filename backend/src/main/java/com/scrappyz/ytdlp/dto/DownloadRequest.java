@@ -12,5 +12,6 @@ public class DownloadRequest {
     private String videoQuality;
     private String audioQuality;
     private String audioFormat;
+    private boolean embedMetadata;
 
 }
