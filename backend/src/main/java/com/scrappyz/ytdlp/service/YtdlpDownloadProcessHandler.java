@@ -92,7 +92,10 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
 
     public void stopProcessById(String id, boolean force) {
         YtdlpDownloadProcess downloadProcess = processes.get(id);
-        if (downloadProcess == null) return;
+        if(downloadProcess == null) {
+            log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process '" + id + "' does not exist");
+            return;
+        }
 
         Process p = downloadProcess.getProcess();
         var exec = downloadProcess.getExecutorService();
