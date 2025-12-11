@@ -307,7 +307,7 @@ function App() {
         <Title order={2}>Media Downloader</Title>
         <form style={{width: 420, maxWidth: "100%"}} onSubmit={form.onSubmit((values) => handleSubmit(values))}>
           <Flex w='100%' direction="column" rowGap="lg">
-            <NativeSelect {...form.getInputProps('type')} label='Type' withAsterisk key={form.key("type")} data={mediaTypes} />
+            <NativeSelect {...form.getInputProps('type')} label='Type' withAsterisk key={form.key("type")} data={mediaTypes} onChange={(e) => form.setFieldValue("type", e.currentTarget.value)} />
             <Group w="100%" gap="0" align='flex-end'>
               <TextInput {...form.getInputProps('url')}
                 label='URL' withAsterisk key={form.key("url")} 
