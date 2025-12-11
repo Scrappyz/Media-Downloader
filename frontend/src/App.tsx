@@ -42,7 +42,7 @@ function App() {
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const { status, progress } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}`) : null});
+  const { status, progress, message } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}`) : null});
 
   const mediaTypes: string[] = ["Video", "Video Only", "Audio Only"];
   const videoQualities: string[] = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"];
@@ -296,9 +296,9 @@ function App() {
     setDownloadProgress(prev => prev = progress);
   }, [progress])
 
-  let progressBarMessage = (downloadProgress > 0) ? `Downloading: ${downloadProgress}%` : "Pending...";
+  let progressBarMessage = (downloadProgress > 0) ? `${message}: ${downloadProgress}%` : "Pending...";
   if(isDownloaded) { // 2nd phase of download (file download)
-    progressBarMessage = (downloadProgress > 0) ? `Uploading: ${downloadProgress}%` : "Uploading to user...";
+    progressBarMessage = (downloadProgress > 0) ? `Fetching: ${downloadProgress}%` : "Fetching resource...";
   }
 
   return (
@@ -341,7 +341,7 @@ function App() {
             />
             {
               !isSubmitted && (
-                <Button bg={color.light[0]} type='submit'>Fetch</Button>
+                <Button bg={color.light[0]} type='submit'>Start Download</Button>
               )
             }
             {
@@ -359,7 +359,7 @@ function App() {
             }
             {
               downloadStatus === "success" && !isDownloaded && (
-                <Button type='button' disabled={isDownloaded} bg={color.light[0]} onClick={() => downloadFile()}>Download</Button>
+                <Button type='button' disabled={isDownloaded} bg={color.light[0]} onClick={() => downloadFile()}>Fetch</Button>
               )
             }
             {

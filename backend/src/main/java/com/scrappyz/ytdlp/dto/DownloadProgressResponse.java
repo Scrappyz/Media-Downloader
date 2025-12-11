@@ -11,5 +11,6 @@ import lombok.Setter;
 public class DownloadProgressResponse {
     
     public float progress;
+    public String message;
 
 }

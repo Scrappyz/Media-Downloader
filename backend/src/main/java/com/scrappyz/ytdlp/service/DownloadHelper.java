@@ -425,12 +425,9 @@ public class DownloadHelper {
     }
 
     private String resolveCommandFormat(RequestType type, Site site, String vidFormat, String vidQuality, String audQuality, String audFormat) {
-        boolean isVideo = (type == RequestType.VIDEO || type == RequestType.VIDEO_ONLY);
-        String formatType = "best";
-
-        if(type == RequestType.VIDEO_ONLY) {
-            formatType += "video";
-        }
+        boolean isVideo = (type == RequestType.VIDEO);
+        boolean isVideoOnly = (type == RequestType.VIDEO_ONLY);
+        String formatType = "bestvideo";
 
         if(type == RequestType.AUDIO_ONLY) {
             formatType = "bestaudio";
@@ -438,7 +435,9 @@ public class DownloadHelper {
 
         String format = formatType;
 
-        if(isVideo) {
+        if(isVideo || isVideoOnly) {
+            format = "(" + formatType;
+            
             if(vidQuality.equals("best")) {
                 format += "";
             } else if(vidQuality.equals("worst")) {
@@ -450,6 +449,14 @@ public class DownloadHelper {
             
             if(!vidFormat.equals("default")) {
                 format += String.format("[ext=%s]", vidFormat);
+            } else {
+                format += "[ext=mp4]/" + formatType + "[ext=mkv]/" + formatType + "[ext=webm]";
+            }
+
+            format += ")";
+
+            if(isVideo) {
+                format += "+(bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio)";
             }
         } else { // Audio only
             if(audFormat.equals("default")) {

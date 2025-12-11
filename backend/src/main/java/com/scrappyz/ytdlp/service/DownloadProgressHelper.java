@@ -21,9 +21,16 @@ public class DownloadProgressHelper {
     private static final Logger log = LoggerFactory.getLogger(DownloadHelper.class);
     private float lastProgressPercentage = 0;
     private final DownloadProperties downloadProperties;
+    private int downloadsDone = 0;
+    private boolean isMergeProcess = false; // Flag to indicate if the process involves a merge (e.g. "bestvideo+bestaudio")
 
     public void processLine(String line, SseEmitter emitter) {
+        // log.info("[DownloadHelper.processLine] Output: " + line);
+
         boolean isDownloadProgress = line.startsWith("[download]") && line.contains("%");
+        if(line.startsWith("[info]") && line.contains("format(s):") && line.contains("+")) {
+            isMergeProcess = true;
+        }
         float progressIncrement = downloadProperties.getProgressIncrement();
 
         if(!isDownloadProgress) {
@@ -43,15 +50,30 @@ public class DownloadProgressHelper {
         // log.info("[DownloadHelper.processLine] Progress string: " + progressStr);
         float progress = Float.parseFloat(progressStr.toString());
 
+        if(progress >= 100.0f) {
+            lastProgressPercentage = 0;
+            downloadsDone++;
+        }
+
         if(progress < lastProgressPercentage + progressIncrement || progress >= 100.0f) {
             return;
         }
 
         lastProgressPercentage = progress;
 
-        log.info("[DownloadHelper.processLine] Progress: " + progress);
+        log.info("[DownloadHelper.processLine] Progress: " + progress + "% | Last Percentage: " + lastProgressPercentage + "%");
 
-        DownloadProgressResponse progressResponse = new DownloadProgressResponse(progress);
+        String message = "Downloading";
+
+        if(isMergeProcess) {
+            if(downloadsDone < 1) {
+                message = "Downloading Video";
+            } else {
+                message = "Downloading Audio";
+            }
+        }
+
+        DownloadProgressResponse progressResponse = new DownloadProgressResponse(progress, message);
         try {
             emitter.send(SseEmitter.event()
                 .name("progress")
