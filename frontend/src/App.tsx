@@ -38,6 +38,7 @@ interface ApiError {
 function App() {
 
   const { height, width } = useWindowDimensions();
+  const isMobile: boolean = width < 700;
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -307,7 +308,7 @@ function App() {
 
   return (
     <MantineProvider defaultColorScheme="light">
-      <Flex pl="10%" pr="10%" h="100vh" direction="column" justify="center" align="center" gap="lg">
+      <Flex mih="100vh" mb="40px" pl="10%" pr="10%" direction="column" justify="center" align="center" gap={0}>
         <Title order={2}>Media Downloader</Title>
         <form style={{width: 420, maxWidth: "100%"}} onSubmit={form.onSubmit((values) => handleSubmit(values))}>
           <Flex w='100%' direction="column" rowGap="lg">
@@ -379,8 +380,8 @@ function App() {
           </Flex>
         </form>
       </Flex>
-      <Flex pl="10%" pr="10%" direction="row" justify="space-around" gap="lg">
-        <Card w="340px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 0px lightblue"}}>
+      <Flex mt={0} pl="10%" pr="10%" direction={isMobile ? "column" : "row"} justify={isMobile ? "center" : "space-around"} gap="lg">
+        <Card w="340px" h="300px" p="40px" style={{borderRadius: "10px", overflowY: "auto", boxShadow: "0px 0px 5px 2px lightblue"}}>
           <Card.Section>
             <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
               <Title order={3}>How To Use</Title>
@@ -399,7 +400,7 @@ function App() {
             </ol>
           </Card.Section>
         </Card>
-        <Card w="340px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 0px lightblue"}}>
+        <Card w="340px" h="300px" p="40px" style={{borderRadius: "10px", overflowY: "auto", boxShadow: "0px 0px 5px 2px lightblue"}}>
           <Card.Section>
             <Flex direction="row" justify="center" align="center" gap="sm" mb="sm" mt="sm">
               <Title order={3}>Supported Sites</Title>
