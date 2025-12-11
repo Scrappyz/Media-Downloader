@@ -321,24 +321,27 @@ function App() {
             </Group>
             {
               isVideo ? (
-                <Grid>
-                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={["Best", ...videoQualities, "Worst"]} /></Grid.Col>
-                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={["Default", ...videoFormats]} /></Grid.Col>
-                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('embedMetadata')} label='Embed Metadata' withAsterisk key={form.key("embedMetadata")} data={["Yes", "No"]} /></Grid.Col>
+                <Grid justify='space-between'>
+                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={["Best", ...videoQualities, "Worst"]} /></Grid.Col>
+                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={["Default", ...videoFormats]} /></Grid.Col>
                 </Grid>
               ) : (
-                <Grid>
-                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('audioQuality')} label='Audio Quality' withAsterisk key={form.key("audioQuality")} data={["Best", ...audioQualities, "Worse"]} /></Grid.Col>
-                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={["Default", ...audioFormats]} /></Grid.Col>
-                  <Grid.Col span={4}><NativeSelect w='100%' {...form.getInputProps('embedMetadata')} label='Embed Metadata' withAsterisk key={form.key("embedMetadata")} data={["Yes", "No"]} /></Grid.Col>
+                <Grid justify='space-between'>
+                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('audioQuality')} label='Audio Quality' withAsterisk key={form.key("audioQuality")} data={["Best", ...audioQualities, "Worse"]} /></Grid.Col>
+                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={["Default", ...audioFormats]} /></Grid.Col>
                 </Grid>
               )
             }
-            <TextInput {...form.getInputProps('outputName')}
-              label='Output Name'
-              key={form.key("outputName")} 
-              placeholder='Enter the name of the downloaded file'
-            />
+            <Grid>
+              <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('embedMetadata')} label='Embed Metadata' withAsterisk key={form.key("embedMetadata")} data={["Yes", "No"]} /></Grid.Col>
+              <Grid.Col span={6}>
+                <TextInput {...form.getInputProps('outputName')}
+                  label='Output Name'
+                  key={form.key("outputName")} 
+                  placeholder='Enter name of file'
+                />
+              </Grid.Col>
+            </Grid>
             {
               !isSubmitted && (
                 <Button bg={color.light[0]} type='submit'>Start Download</Button>
