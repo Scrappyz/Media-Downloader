@@ -2,11 +2,10 @@ package com.scrappyz.ytdlp.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import lombok.Getter;
 import lombok.Setter;
 
 @ConfigurationProperties(prefix = "ytdlp")
-@Setter @Getter
+@Setter
 public class YtdlpConfig {
     
     private boolean autoUpdate;
@@ -16,5 +15,17 @@ public class YtdlpConfig {
     
     public boolean isAutoUpdate() {
         return autoUpdate;
+    }
+
+    public boolean isUseCookies() {
+        return useCookies;
+    }
+
+    public String getBrowserCookies() {
+        return browserCookies;
+    }
+
+    public String getJsRuntime() {
+        return jsRuntime;
     }
 }
