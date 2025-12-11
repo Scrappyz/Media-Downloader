@@ -308,7 +308,7 @@ function App() {
 
   return (
     <MantineProvider defaultColorScheme="light">
-      <Flex mih="100vh" mb="40px" pl="10%" pr="10%" direction="column" justify="center" align="center" gap={0}>
+      <Flex h="75vh" pb="30px" pl="10%" pr="10%" direction="column" justify="flex-end" align="center">
         <Title order={2}>Media Downloader</Title>
         <form style={{width: 420, maxWidth: "100%"}} onSubmit={form.onSubmit((values) => handleSubmit(values))}>
           <Flex w='100%' direction="column" rowGap="lg">
@@ -380,14 +380,14 @@ function App() {
           </Flex>
         </form>
       </Flex>
-      <Flex mt={0} pl="10%" pr="10%" direction={isMobile ? "column" : "row"} justify={isMobile ? "center" : "space-around"} gap="lg">
-        <Card w="340px" h="300px" p="40px" style={{borderRadius: "10px", overflowY: "auto", boxShadow: "0px 0px 5px 2px lightblue"}}>
+      <Flex mb="100px" pl="10%" pr="10%" direction={isMobile ? "column" : "row"} justify={isMobile ? "center" : "space-around"} gap="lg">
+        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 2px lightblue"}}>
           <Card.Section>
             <Flex direction="row" justify="center" align="center" gap="sm" mb="sm">
               <Title order={3}>How To Use</Title>
             </Flex>
           </Card.Section>
-          <Card.Section>
+          <Card.Section style={{overflowY: "auto"}}>
             <ol>
               <li><Text>Select the type of media you want to download (Video, Video Only, Audio Only).</Text></li>
               <li><Text>Go to the site and get the link of the video you want to download. Use "Share &gt; Copy Link" instead of the URL up top.</Text></li>
@@ -400,18 +400,33 @@ function App() {
             </ol>
           </Card.Section>
         </Card>
-        <Card w="340px" h="300px" p="40px" style={{borderRadius: "10px", overflowY: "auto", boxShadow: "0px 0px 5px 2px lightblue"}}>
+        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 2px lightblue"}}>
           <Card.Section>
             <Flex direction="row" justify="center" align="center" gap="sm" mb="sm" mt="sm">
               <Title order={3}>Supported Sites</Title>
             </Flex>
           </Card.Section>
-          <Card.Section>
+          <Card.Section style={{overflowY: "auto"}}>
             <Flex direction="row" justify="center" pr="lg">
               <ul>
                 {
                   supportedSites.map((site, index) => <li key={index}>{site}</li>)
                 }
+              </ul>
+            </Flex>
+          </Card.Section>
+        </Card>
+        <Card w="300px" h="300px" p="40px" style={{borderRadius: "10px", boxShadow: "0px 0px 5px 2px lightblue"}}>
+          <Card.Section>
+            <Flex direction="row" justify="center" align="center" gap="sm" mb="sm" mt="sm">
+              <Title order={3}>Documentation</Title>
+            </Flex>
+          </Card.Section>
+          <Card.Section style={{overflowY: "auto"}}>
+            <Flex direction="row" justify="center" pr="lg">
+              <ul>
+                <li><a href='https://github.com/Scrappyz/Media-Downloader'>GitHub</a></li>
+                <li><a href='https://github.com/user-attachments/assets/c486d42a-b81c-4d02-a74c-5bf06ac315c8'>Video Demo</a></li>
               </ul>
             </Flex>
           </Card.Section>
