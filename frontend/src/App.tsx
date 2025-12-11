@@ -344,7 +344,7 @@ function App() {
             </Grid>
             {
               !isSubmitted && (
-                <Button bg={color.light[0]} type='submit'>Start Download</Button>
+                <Button bg={color.light[0]} type='submit' disabled={isDownloaded}>Start {downloadStatus === "success" ? "Another" : ""} Download</Button>
               )
             }
             {
@@ -362,7 +362,7 @@ function App() {
             }
             {
               downloadStatus === "success" && !isDownloaded && (
-                <Button type='button' disabled={isDownloaded} bg={color.light[0]} onClick={() => downloadFile()}>Fetch</Button>
+                <Button type='button' disabled={isDownloaded} bg={color.light[0]} onClick={() => downloadFile()}>Get File</Button>
               )
             }
             {
