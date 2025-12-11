@@ -316,7 +316,7 @@ function App() {
             <Group w="100%" gap="0" align='flex-end'>
               <TextInput {...form.getInputProps('url')}
                 label='URL' withAsterisk key={form.key("url")} 
-                placeholder='Enter video link here'
+                placeholder='Enter link here'
                 w="100%"
                 rightSection={
                   <Button type='button' bg={color.light[0]} radius={2} onClick={handlePaste} h='100%' w='100%' p={0} m={0}>Paste</Button>
