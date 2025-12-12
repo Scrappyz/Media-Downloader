@@ -22,7 +22,6 @@ import com.scrappyz.ytdlp.dto.DownloadRequest;
 import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.exception.custom.InvalidUlidException;
 import com.scrappyz.ytdlp.service.DownloadService;
-import com.scrappyz.ytdlp.utils.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,7 +33,6 @@ public class DownloadController {
     private final Logger log = LoggerFactory.getLogger(DownloadController.class);
 
     private final DownloadService downloadService;
-    private final SecurityUtils securityUtils;
     
     @PostMapping
     public ResponseEntity<DownloadResponse> download(@RequestBody DownloadRequest request) {
