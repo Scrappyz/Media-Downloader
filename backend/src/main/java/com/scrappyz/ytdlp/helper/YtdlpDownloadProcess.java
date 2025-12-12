@@ -12,6 +12,7 @@ public class YtdlpDownloadProcess {
     
     private Process process;
     private ExecutorService executorService;
+    private boolean running;
     private boolean cancelled;
 
     public YtdlpDownloadProcess(Process process, ExecutorService executorService) {

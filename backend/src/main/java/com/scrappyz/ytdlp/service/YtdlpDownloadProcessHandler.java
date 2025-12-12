@@ -30,6 +30,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
     @Override
     public YtdlpProcessResult runProcess(List<String> commands, String id, SseEmitter emitter, ProcessLineHandler processLineHandler, ErrorLineHandler errorLineHandler) throws DownloadFailedException {
         YtdlpProcessResult processResult = new YtdlpProcessResult();
+        YtdlpDownloadProcess downloadProcess = new YtdlpDownloadProcess();
         
         try {
             ProcessBuilder pb = new ProcessBuilder(commands);
@@ -38,7 +39,8 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
 
             processes.put(id, new YtdlpDownloadProcess(process, Executors.newFixedThreadPool(2)));
 
-            YtdlpDownloadProcess downloadProcess = processes.get(id);
+            downloadProcess = processes.get(id);
+            downloadProcess.setRunning(true);
 
             downloadProcess.getExecutorService().execute(() -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -79,10 +81,12 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
             processes.remove(id);
         } catch(IOException | InterruptedException e) {
             log.info("[YtdlpDownloadProcessHandler.runProcess] Download got interrupted");
+            downloadProcess.setRunning(false);
             processes.remove(id);
             throw new DownloadFailedException();
         }
 
+        downloadProcess.setRunning(false);
         return processResult;
     }
 
@@ -91,9 +95,16 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
     }
 
     public void stopProcessById(String id, boolean force) {
+        log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process '" + id + "' is being stopped");
         YtdlpDownloadProcess downloadProcess = processes.get(id);
+
         if(downloadProcess == null) {
             log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process '" + id + "' does not exist");
+            return;
+        }
+
+        if(!downloadProcess.isRunning()) {
+            log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process with '" + id + "' is no longer running");
             return;
         }
 
@@ -147,6 +158,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
         }
 
         processes.get(id).setCancelled(true);
+        processes.get(id).setRunning(false);
     }
 
     public void stopProcessById(String id) {
@@ -155,6 +167,13 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
 
     public boolean hasProcess(String id) {
         return processes.containsKey(id);
+    }
+
+    public boolean isProcessRunning(String id) {
+        YtdlpDownloadProcess downloadProcess = processes.get(id);
+        if(downloadProcess == null) return false;
+
+        return downloadProcess.isRunning();
     }
 
     public boolean isProcessCancelled(String id) {

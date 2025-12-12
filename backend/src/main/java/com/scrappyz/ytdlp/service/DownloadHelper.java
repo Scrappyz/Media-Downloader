@@ -202,6 +202,7 @@ public class DownloadHelper {
 
         Path outputPath = paths.getDownloadPath().resolve(id).normalize();
 
+        // Compile commands
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
         if(ytdlpConfig.isUseCookies()) {
@@ -309,7 +310,7 @@ public class DownloadHelper {
         log.info("[DownloadHelper.download] Download with ID " + id + " has finished");
 
         try {
-            emitter.send(SseEmitter.event()
+            emitter.send(SseEmitter.event() // Send final result
                 .name("status")
                 .data(result)
             );

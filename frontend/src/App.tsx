@@ -142,7 +142,7 @@ function App() {
     setDownloadProgress(0);
   }
 
-  const handleSubmit = async (values: FormValues): Promise<any> => {
+  const handleSubmit = async (values: FormValues): Promise<any> => { // Start Download
     if(isSubmitted) {
       return;
     }
@@ -151,6 +151,7 @@ function App() {
     setIsSubmitted(true);
     setApiError(null);
     setDownloadStatus(null);
+    setRequestId(null);
 
     console.log("Form Values:", values);
     const request = transformRequest(values);
@@ -193,6 +194,7 @@ function App() {
       }
 
       const data: StatusResponse = await response.json();
+      console.log("Cancel Data:", data);
 
       if(data.status === "success") {
         reset();
@@ -355,7 +357,7 @@ function App() {
             {
               (isSubmitted) && (
                 <>
-                  <Button type='button' bg={color.light[0]} disabled={isCancelled} onClick={cancelRequest}>Cancel</Button>
+                  <Button type='button' bg={color.light[0]} disabled={isCancelled || !requestId} onClick={cancelRequest}>Cancel</Button>
                   <ProgressBar progress={downloadProgress} message={progressBarMessage} style={{fillColor: color.light[0]}} />
                 </>
               )
