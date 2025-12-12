@@ -81,6 +81,8 @@ public class DownloadProgressHelper {
             );
         } catch(IOException e) {
             log.info("[DownloadHelper.processLine] Failed to send progress update via SseEmitter");
+        } catch(IllegalStateException e) {
+            log.info("[DownloadHelper.processLine] Emitter has already completed");
         }
         
     }

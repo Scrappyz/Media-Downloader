@@ -245,6 +245,8 @@ public class DownloadHelper {
                     );
                 } catch(IOException ex) {
                     log.info("[DownloadHelper.download] Failed to send download cancelled status via SseEmitter");
+                } catch(IllegalStateException ex) {
+                    log.info("[DownloadHelper.download] Emitter has already completed");
                 }
 
                 downloadProcessHandler.removeProcessById(id);
@@ -298,6 +300,8 @@ public class DownloadHelper {
             log.info("[DownloadHelper.download] Failed to send download failed status via SseEmitter");
             emitter.completeWithError(e);
             return;
+        } catch(IllegalStateException e) {
+            log.info("[DownloadHelper.download] Emitter has already completed");
         }
 
         // ========DOWNLOAD COMPLETED SUCCESSFULLY========
@@ -316,6 +320,9 @@ public class DownloadHelper {
             );
         } catch(IOException e) {
             log.info("[DownloadHelper.download] Failed to send initial pending status via SseEmitter");
+        } catch(IllegalStateException e) {
+            log.info("[DownloadHelper.download] Emitter has already completed");
+            return;
         }
 
         emitter.complete();
