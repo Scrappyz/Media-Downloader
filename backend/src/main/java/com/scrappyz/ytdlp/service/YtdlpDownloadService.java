@@ -71,8 +71,12 @@ public class YtdlpDownloadService implements DownloadService {
         Arrays.asList(128, 192, 256, 320) // bitrate in kbps
     );
 
-    private static final HashSet<String> audioCodec = new HashSet<>(
-        Arrays.asList("flac", "alac", "wav", "aiff", "opus", "vorbis", "aac", "mp4a", "m4a", "mp3", "ac4", "eac3", "ac3", "dts")
+    private static final HashSet<String> videoFormat = new HashSet<>(
+        Arrays.asList("mp4", "mkv")
+    );
+
+    private static final HashSet<String> audioFormat = new HashSet<>(
+        Arrays.asList("flac", "m4a", "mp3")
     );
 
     private final ConcurrentHashMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
@@ -135,7 +139,8 @@ public class YtdlpDownloadService implements DownloadService {
     public enum ErrorCode {
         UNSUPPORTED_URL("unsupported_url"),
         INVALID_URL("invalid_url"),
-        FORMAT_UNAVAILABLE("format_unavailable");
+        FORMAT_UNAVAILABLE("format_unavailable"),
+        POSTPROCESSING_ERROR("postprocessing_error");
 
         private final String string;
         private static final HashMap<String, ErrorCode> byString = new HashMap<>();
@@ -345,6 +350,14 @@ public class YtdlpDownloadService implements DownloadService {
                 );
             }
 
+            if(error == ErrorCode.POSTPROCESSING_ERROR) {
+                log.info("[YtdlpDownloadService.download] Postprocessing error");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(ErrorCode.POSTPROCESSING_ERROR.getString(), "There was a problem in postprocessing"))
+                );
+            }
+
             if(error != null) {
                 emitter.complete();
                 return;
@@ -488,64 +501,76 @@ public class YtdlpDownloadService implements DownloadService {
     }
 
     private String resolveCommandFormat(RequestType type, Site site, String vidFormat, String vidQuality, String audQuality, String audFormat) {
+        
         boolean isVideo = (type == RequestType.VIDEO);
         boolean isVideoOnly = (type == RequestType.VIDEO_ONLY);
-        String formatType = "bestvideo";
+        boolean isAudioOnly = (type == RequestType.AUDIO_ONLY);
 
-        if(type == RequestType.AUDIO_ONLY) {
-            formatType = "bestaudio";
+        if((isVideo || isVideoOnly) && !vidFormat.equals("default") && !videoFormat.contains(vidFormat)) {
+            log.info("[YtdlpDownloadService.resolveCommandFormat] '" + vidFormat + "' is not available");
+            throw new FormatUnavailableException("'" + vidFormat + "' is not available");
         }
 
-        String format = formatType;
+        if(isAudioOnly && !audFormat.equals("default") && !audioFormat.contains(audFormat)) {
+            log.info("[YtdlpDownloadService.resolveCommandFormat] '" + audFormat + "' is not available");
+            throw new FormatUnavailableException("'" + audFormat + "' is not available");
+        }
 
-        if(isVideo || isVideoOnly) {
-            format = "(" + formatType;
-            
+        String videoCommand = "bestvideo";
+        String audioCommand = "bestaudio";
+
+        if(isVideo || isVideoOnly) { // Process video command
+
             if(vidQuality.equals("best")) {
-                format += "";
+                videoCommand += "";
             } else if(vidQuality.equals("worst")) {
                 int lowestQuality = videoQuality.first();
-                format += String.format("[height<=%s]", lowestQuality);
+                videoCommand += String.format("[height<=%s]", lowestQuality);
             } else {
-                format += String.format("[height<=%s]", vidQuality);
+                videoCommand += String.format("[height<=%s]", vidQuality);
             }
             
             if(!vidFormat.equals("default")) {
-                format += String.format("[ext=%s]", vidFormat);
+                videoCommand += String.format("[ext=%s]", vidFormat);
             } else {
-                format += "[ext=mp4]/" + formatType + "[ext=mkv]/" + formatType + "[ext=webm]";
+                videoCommand += "[ext=mp4]/" + videoCommand + "[ext=mkv]";
             }
 
-            format += ")";
+        } 
+        
+        if(isVideo || isAudioOnly) { // Process audio command
 
-            if(isVideo) {
-                format += "+(bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio)";
-            }
-        } else { // Audio only
             if(audFormat.equals("default")) {
                 if(audQuality.equals("best")) {
-                    format = "bestaudio[ext=flac]/bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio";
+                    audioCommand = "bestaudio[ext=flac]/bestaudio[ext=m4a]/bestaudio[ext=mp3]";
                 } else if(audQuality.equals("worst")) {
-                    format = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", 128, 128);
+                    audioCommand = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", 128, 128);
                 } else {
-                    format = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", audQuality, audQuality);
+                    audioCommand = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", audQuality, audQuality);
                 }
             } else {
                 if(audQuality.equals("best")) {
-                    format = String.format("bestaudio[ext=%s]", audFormat);
+                    audioCommand = String.format("bestaudio[ext=%s]", audFormat);
                 } else if(audQuality.equals("worst")) {
-                    format = String.format("bestaudio[ext=%s][abr<=%s]", audFormat, 128);
+                    audioCommand = String.format("bestaudio[ext=%s][abr<=%s]", audFormat, 128);
                 } else {
-                    format = String.format("bestaudio[ext=%s][abr<=%s]", audFormat, audQuality);
+                    audioCommand = String.format("bestaudio[ext=%s][abr<=%s]", audFormat, audQuality);
                 }
             }
+
         }
 
-        if(isVideo && site != Site.YOUTUBE) { // For non-Youtube sites
-            format += "/" + formatType;
+        String finalFormat;
+
+        if(isVideo) {
+            finalFormat = "(" + videoCommand + ")+(" + audioCommand + ")";
+        } else if(isVideoOnly) {
+            finalFormat = videoCommand;
+        } else {
+            finalFormat = audioCommand;
         }
 
-        return format;
+        return finalFormat;
     }
 
     private ErrorCode parseError(String error) {
@@ -559,6 +584,10 @@ public class YtdlpDownloadService implements DownloadService {
 
         if(error.contains("Requested format is not available")) {
             return ErrorCode.FORMAT_UNAVAILABLE;
+        }
+
+        if(error.contains("Supported filetypes for thumbnail embedding")) {
+            return ErrorCode.POSTPROCESSING_ERROR;
         }
 
         return null;
