@@ -33,6 +33,7 @@ public class DownloadController {
 
     private final Logger log = LoggerFactory.getLogger(DownloadController.class);
 
+    @Qualifier("ytdlp")
     private final DownloadService downloadService;
     
     @PostMapping

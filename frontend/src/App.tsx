@@ -172,6 +172,7 @@ function App() {
 
       const data = await response.json();
       setRequestId(data.requestId);
+      console.log(data.requestId);
       return data;
     } catch(error: any) {
       console.error(error);
@@ -311,6 +312,7 @@ function App() {
   return (
     <MantineProvider defaultColorScheme="light">
       <Flex h="100vh" pb="30px" pl="10%" pr="10%" direction="column" justify="center" align="center">
+        <Title style={{color: "red"}} order={3}>Under Maintenance</Title>
         <Title order={2}>Media Downloader</Title>
         <form style={{width: 420, maxWidth: "100%"}} onSubmit={form.onSubmit((values) => handleSubmit(values))}>
           <Flex w='100%' direction="column" rowGap="lg">

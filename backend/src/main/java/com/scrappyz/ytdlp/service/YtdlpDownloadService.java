@@ -39,7 +39,6 @@ import com.scrappyz.ytdlp.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.exception.custom.UnsupportedUrlException;
 import com.scrappyz.ytdlp.helper.YtdlpProcessResult;
-import com.scrappyz.ytdlp.service.DownloadService.RequestStatus;
 
 import lombok.RequiredArgsConstructor;
 
@@ -157,16 +156,49 @@ public class YtdlpDownloadService implements DownloadService {
     };
 
     // Queue the download request
+    @Override
     public DownloadResponse enqueue(DownloadRequest request) {
         DownloadResponse result = new DownloadResponse();
         String id = UlidCreator.getMonotonicUlid().toString();
 
         addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
-        download(id, request);
+        download(id, request); // Probably not async
 
         result.setRequestId(id);
 
         return result;
+    }
+
+    @Override
+    public void cancelDownload(String id) {
+        downloadProcessHandler.stopProcessById(id, true);
+    }
+
+    @Override
+    public SseEmitter getEmitter(String id) throws InvalidProcessException {
+        if(!emitters.containsKey(id)) {
+            throw new InvalidProcessException("Emitter with request ID " + id + " could not be found");
+        }
+
+        return emitters.get(id);
+    }
+
+    @Override
+    public FileSystemResource getResource(String id) throws ResourceNotFoundException {
+        Path resourcePath = paths.getDownloadPath().resolve(id).normalize();
+
+        File directory = new File(resourcePath.toString());
+        if(!directory.exists() || !directory.isDirectory()) {
+            throw new ResourceNotFoundException("[YtdlpDownloadService.getResource] Resource with request ID '" + id + "' could not be found");
+        }
+
+        File[] files = directory.listFiles();
+        if(files == null || files.length == 0) {
+            throw new ResourceNotFoundException("[YtdlpDownloadService.getResource] Resource with request ID '" + id + "' has no files");
+        }
+
+        FileSystemResource resource = new FileSystemResource(files[0]);
+        return resource;
     }
 
     // Methods:
@@ -183,7 +215,7 @@ public class YtdlpDownloadService implements DownloadService {
 
         // Run when the download is complete
         emitter.onCompletion(() -> {
-            log.info("[DownloadHelper.download] SseEmitter with ID " + id + " has completed");
+            log.info("[YtdlpDownloadService.download] SseEmitter with ID " + id + " has completed");
             emitters.remove(id);
         });
 
@@ -193,7 +225,7 @@ public class YtdlpDownloadService implements DownloadService {
                 .data(result)
             );
         } catch(IOException e) {
-            log.info("[DownloadHelper.download] Failed to send initial pending status via SseEmitter");
+            log.info("[YtdlpDownloadService.download] Failed to send initial pending status via SseEmitter");
         }
 
         String url = request.getUrl();
@@ -209,7 +241,7 @@ public class YtdlpDownloadService implements DownloadService {
 
         Site site = parseSite(url);
 
-        log.info("[DownloadHelper.download] Downloading: " + url);
+        log.info("[YtdlpDownloadService.download] Downloading: " + url);
 
         RequestType t = RequestType.getMediaType(type);
         boolean isVideo = (t == RequestType.VIDEO || t == RequestType.VIDEO_ONLY);
@@ -217,7 +249,7 @@ public class YtdlpDownloadService implements DownloadService {
         boolean isAudioOnly = t == RequestType.AUDIO_ONLY;
 
         String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audQuality, audFormat);
-        log.info("[DownloadHelper.download] Command Format: " + format);
+        log.info("[YtdlpDownloadService.download] Command Format: " + format);
 
         Path outputPath = paths.getDownloadPath().resolve(id).normalize();
 
@@ -234,7 +266,7 @@ public class YtdlpDownloadService implements DownloadService {
         commands.addAll(Arrays.asList(url, "-P", outputPath.toString()));
         commands.addAll(Arrays.asList("-o", id + ".%(ext)s", "--no-warnings", "--newline"));
 
-        log.info("[DownloadHelper.download] Download Commands: " + String.join(" ", commands));
+        log.info("[YtdlpDownloadService.download] Download Commands: " + String.join(" ", commands));
 
         // Run the download process
         YtdlpProcessResult processResult = new YtdlpProcessResult();
@@ -253,7 +285,7 @@ public class YtdlpDownloadService implements DownloadService {
             );
         } catch(DownloadFailedException e) { // If something goes wrong with the download process or user cancelled
             if(downloadProcessHandler.isProcessCancelled(id)) {
-                log.info("[DownloadHelper.download] Download with ID " + id + " was cancelled");
+                log.info("[YtdlpDownloadService.download] Download with ID " + id + " was cancelled");
                 result.setStatus("cancelled");
                 result.setMessage("Download was cancelled");
 
@@ -263,9 +295,9 @@ public class YtdlpDownloadService implements DownloadService {
                         .data(result)
                     );
                 } catch(IOException ex) {
-                    log.info("[DownloadHelper.download] Failed to send download cancelled status via SseEmitter");
+                    log.info("[YtdlpDownloadService.download] Failed to send download cancelled status via SseEmitter");
                 } catch(IllegalStateException ex) {
-                    log.info("[DownloadHelper.download] Emitter has already completed");
+                    log.info("[YtdlpDownloadService.download] Emitter has already completed");
                 }
 
                 downloadProcessHandler.removeProcessById(id);
@@ -274,7 +306,7 @@ public class YtdlpDownloadService implements DownloadService {
                 return;
             }
 
-            log.info("[DownloadHelper.download] Remove process with ID " + id + " because of error");
+            log.info("[YtdlpDownloadService.download] Remove process with ID " + id + " because of error");
             downloadProcessHandler.removeProcessById(id);
             throw new DownloadFailedException();
         }
@@ -287,7 +319,7 @@ public class YtdlpDownloadService implements DownloadService {
         ErrorCode error = processResult.getError();
         try {
             if(error == ErrorCode.INVALID_URL) {
-                log.info("[DownloadHelper.download] Invalid URL");
+                log.info("[YtdlpDownloadService.download] Invalid URL");
                 emitter.send(SseEmitter.event()
                     .name("error")
                     .data(new ApiError(ErrorCode.INVALID_URL.getString(), "The URL provided is invalid"))
@@ -295,7 +327,7 @@ public class YtdlpDownloadService implements DownloadService {
             }
 
             if(error == ErrorCode.UNSUPPORTED_URL) {
-                log.info("[DownloadHelper.download] Unsupported URL");
+                log.info("[YtdlpDownloadService.download] Unsupported URL");
                 emitter.send(SseEmitter.event()
                     .name("error")
                     .data(new ApiError(ErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is invalid"))
@@ -303,7 +335,7 @@ public class YtdlpDownloadService implements DownloadService {
             }
 
             if(error == ErrorCode.FORMAT_UNAVAILABLE) {
-                log.info("[DownloadHelper.download] Format unavailable");
+                log.info("[YtdlpDownloadService.download] Format unavailable");
                 emitter.send(SseEmitter.event()
                     .name("error")
                     .data(new ApiError(ErrorCode.FORMAT_UNAVAILABLE.getString(), "The URL provided is invalid"))
@@ -316,11 +348,11 @@ public class YtdlpDownloadService implements DownloadService {
             }
 
         } catch(IOException e) {
-            log.info("[DownloadHelper.download] Failed to send download failed status via SseEmitter");
+            log.info("[YtdlpDownloadService.download] Failed to send download failed status via SseEmitter");
             emitter.completeWithError(e);
             return;
         } catch(IllegalStateException e) {
-            log.info("[DownloadHelper.download] Emitter has already completed");
+            log.info("[YtdlpDownloadService.download] Emitter has already completed");
         }
 
         // ========DOWNLOAD COMPLETED SUCCESSFULLY========
@@ -330,7 +362,7 @@ public class YtdlpDownloadService implements DownloadService {
 
         resourceHelper.cleanup(id); // Cleanup resources in set time
 
-        log.info("[DownloadHelper.download] Download with ID " + id + " has finished");
+        log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
 
         try {
             emitter.send(SseEmitter.event() // Send final result
@@ -338,9 +370,9 @@ public class YtdlpDownloadService implements DownloadService {
                 .data(result)
             );
         } catch(IOException e) {
-            log.info("[DownloadHelper.download] Failed to send initial pending status via SseEmitter");
+            log.info("[YtdlpDownloadService.download] Failed to send initial pending status via SseEmitter");
         } catch(IllegalStateException e) {
-            log.info("[DownloadHelper.download] Emitter has already completed");
+            log.info("[YtdlpDownloadService.download] Emitter has already completed");
             return;
         }
 
@@ -547,10 +579,6 @@ public class YtdlpDownloadService implements DownloadService {
     }
     // ---HELPER METHODS---
 
-    public void cancelDownload(String id) {
-        downloadProcessHandler.stopProcessById(id, true);
-    }
-
     public void addEmitter(String id, SseEmitter emitter) {
         emitters.put(id, emitter);
     }
@@ -565,28 +593,4 @@ public class YtdlpDownloadService implements DownloadService {
         emitters.remove(id);
     }
 
-    public SseEmitter getEmitter(String id) throws InvalidProcessException {
-        if(!emitters.containsKey(id)) {
-            throw new InvalidProcessException("Emitter with request ID " + id + " could not be found");
-        }
-
-        return emitters.get(id);
-    }
-
-    public FileSystemResource getResource(String id) throws ResourceNotFoundException {
-        Path resourcePath = paths.getDownloadPath().resolve(id).normalize();
-
-        File directory = new File(resourcePath.toString());
-        if(!directory.exists() || !directory.isDirectory()) {
-            throw new ResourceNotFoundException("[DownloadHelper.getResource] Resource with request ID '" + id + "' could not be found");
-        }
-
-        File[] files = directory.listFiles();
-        if(files == null || files.length == 0) {
-            throw new ResourceNotFoundException("[DownloadHelper.getResource] Resource with request ID '" + id + "' has no files");
-        }
-
-        FileSystemResource resource = new FileSystemResource(files[0]);
-        return resource;
-    }
 }

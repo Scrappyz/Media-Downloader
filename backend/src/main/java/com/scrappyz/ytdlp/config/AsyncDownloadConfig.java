@@ -24,6 +24,7 @@ public class AsyncDownloadConfig {
         ex.setCorePoolSize(core);
         ex.setMaxPoolSize(max);
         ex.setQueueCapacity(queueCap);
+        
         // Reject when saturated → you’ll return HTTP 429
         ex.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         ex.initialize();
