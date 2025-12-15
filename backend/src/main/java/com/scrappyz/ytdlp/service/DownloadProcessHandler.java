@@ -21,6 +21,6 @@ public interface DownloadProcessHandler<T> {
 
     @FunctionalInterface
     interface ErrorLineHandler {
-        DownloadHelper.ErrorCode handle(String line) throws Exception;
+        YtdlpDownloadService.ErrorCode handle(String line) throws Exception;
     }
 }

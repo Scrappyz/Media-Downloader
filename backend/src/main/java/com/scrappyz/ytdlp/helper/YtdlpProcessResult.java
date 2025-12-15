@@ -1,6 +1,6 @@
 package com.scrappyz.ytdlp.helper;
 
-import com.scrappyz.ytdlp.service.DownloadHelper.ErrorCode;
+import com.scrappyz.ytdlp.service.YtdlpDownloadService.ErrorCode;
 
 public class YtdlpProcessResult {
     

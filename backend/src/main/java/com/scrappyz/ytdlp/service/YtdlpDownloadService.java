@@ -17,15 +17,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.github.f4b6a3.ulid.UlidCreator;
+import com.scrappyz.ytdlp.config.DownloadProperties;
 import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.config.YtdlpConfig;
 import com.scrappyz.ytdlp.dto.ApiError;
 import com.scrappyz.ytdlp.dto.DownloadRequest;
+import com.scrappyz.ytdlp.dto.DownloadResponse;
 import com.scrappyz.ytdlp.dto.DownloadResult;
 import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.exception.custom.FailedProcessException;
@@ -39,16 +43,18 @@ import com.scrappyz.ytdlp.service.DownloadService.RequestStatus;
 
 import lombok.RequiredArgsConstructor;
 
-@Service
+@Service("ytdlp")
+@Primary
 @RequiredArgsConstructor
-public class DownloadHelper {
+public class YtdlpDownloadService implements DownloadService {
 
-    private static final Logger log = LoggerFactory.getLogger(DownloadHelper.class);
+    private static final Logger log = LoggerFactory.getLogger(YtdlpDownloadService.class);
 
     private final ObjectProvider<DownloadProgressHelper> progressHelperProvider;
     
     private final PathProperties paths;
     private final YtdlpConfig ytdlpConfig;
+    private final DownloadProperties downloadProperties;
 
     private final DownloadResourceHelper resourceHelper;
     private final YtdlpDownloadProcessHandler downloadProcessHandler;
@@ -149,6 +155,19 @@ public class DownloadHelper {
             return byString.get(str);
         }
     };
+
+    // Queue the download request
+    public DownloadResponse enqueue(DownloadRequest request) {
+        DownloadResponse result = new DownloadResponse();
+        String id = UlidCreator.getMonotonicUlid().toString();
+
+        addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
+        download(id, request);
+
+        result.setRequestId(id);
+
+        return result;
+    }
 
     // Methods:
     // For video + audio: yt-dlp -f best[ext=mp4][height<=720] <url>

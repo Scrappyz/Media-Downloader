@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class DownloadProgressHelper {
     
-    private static final Logger log = LoggerFactory.getLogger(DownloadHelper.class);
+    private static final Logger log = LoggerFactory.getLogger(YtdlpDownloadService.class);
     private float lastProgressPercentage = 0;
     private final DownloadProperties downloadProperties;
     private int downloadsDone = 0;
