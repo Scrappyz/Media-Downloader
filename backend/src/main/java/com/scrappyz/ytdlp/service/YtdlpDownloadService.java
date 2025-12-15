@@ -13,13 +13,14 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -54,6 +55,9 @@ public class YtdlpDownloadService implements DownloadService {
     private final PathProperties paths;
     private final YtdlpConfig ytdlpConfig;
     private final DownloadProperties downloadProperties;
+
+    @Qualifier("downloadExecutor")
+    private final ExecutorService downloadExecutor;
 
     private final DownloadResourceHelper resourceHelper;
     private final YtdlpDownloadProcessHandler downloadProcessHandler;
@@ -162,7 +166,7 @@ public class YtdlpDownloadService implements DownloadService {
         String id = UlidCreator.getMonotonicUlid().toString();
 
         addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
-        download(id, request); // Probably not async
+        downloadExecutor.submit(() -> download(id, request));
 
         result.setRequestId(id);
 
@@ -206,8 +210,7 @@ public class YtdlpDownloadService implements DownloadService {
     // For video only: yt-dlp -f bestvideo[ext=mp4][height<=720] <url>
     // For audio only: yt-dlp -f bestaudio[ext=m4a] <url>
     // For getting filename ahead of time: yt-dlp -o "%(title)s.%(ext)s" --get-filename <url>
-    @Async("downloadExecutor")
-    public void download(String id, DownloadRequest request) 
+    private void download(String id, DownloadRequest request) 
         throws InvalidUrlException, UnsupportedUrlException, FormatUnavailableException, DownloadFailedException, FailedProcessException {
 
         DownloadResult result = new DownloadResult("pending", "Download is pending");
