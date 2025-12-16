@@ -32,6 +32,7 @@ public class DownloadResourceHelper {
 
     // Run the resource helper for throughout the whole runtime
     public void run() {
+        log.info("[DownloadResourceHelper.run] Running resource manager");
         while(true) {
             try {
                 ExpiringResource resource = queue.take();

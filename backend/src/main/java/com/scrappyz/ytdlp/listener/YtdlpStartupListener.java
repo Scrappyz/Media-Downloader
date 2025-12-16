@@ -73,7 +73,6 @@ public class YtdlpStartupListener implements ApplicationListener<ApplicationRead
         }
 
         startupExecutor.execute(() -> resourceHelper.run()); // Expire resources
-        log.info("[YtdlpStartupListener.onApplicationEvent] Running resource manager");
     }
 
     @PreDestroy
