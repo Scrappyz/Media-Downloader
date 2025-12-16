@@ -9,6 +9,7 @@
 
 ### To be added
 - Add tooltip in frontend.
+- Add error handling for expired resources.
 
 ### To be changed
 - Revamp expiry mechanic with `DelayQueue`.
