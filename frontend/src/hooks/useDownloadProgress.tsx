@@ -7,18 +7,22 @@ interface SSEParameters {
 
 interface ProgressData {
     status: string | null,
+    code: string | null,
     progress: number,
     message: string | null
 }
 
 export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressData => {
     const [status, setStatus] = useState<string | null>(null);
+    const [code, setCode] = useState<string | null>(null);
     const [progress, setProgress] = useState<number>(0);
     const [message, setMessage] = useState<string | null>(null);
 
     const reset = () => {
         setStatus(null);
+        setCode(null);
         setProgress(0);
+        setMessage(null);
     }
 
     useEffect(() => {
@@ -52,6 +56,10 @@ export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressDa
         eventSource.addEventListener("error", (event: MessageEvent) => {
             const parsedData = JSON.parse(event.data);
             console.log("Error Update:", parsedData);
+            setStatus("failed");
+            setCode(parsedData.code);
+            setProgress(0);
+            setMessage(parsedData.message);
         });
 
         eventSource.onerror = (error) => {

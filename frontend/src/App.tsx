@@ -47,7 +47,7 @@ function App() {
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const { status, progress, message } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}`) : null});
+  const { status, code, progress, message } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}`) : null});
 
   const mediaTypes: string[] = ["Video", "Video Only", "Audio Only"];
   const videoQualities: string[] = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"];
@@ -294,6 +294,15 @@ function App() {
       return;
     }
 
+    if(status === "failed") {
+      console.log("failed");
+      setApiError(message);
+      setDownloadProgress(0);
+      setDownloadStatus(status);
+      setIsSubmitted(false);
+      return;
+    }
+
     if(status !== "success") return;
 
     setDownloadStatus(status);
@@ -375,7 +384,7 @@ function App() {
               )
             }
             {
-              apiError !== null && !isSubmitted && (
+              apiError !== null && (
                 <Center>
                   <Text c={color.light[0]}>{apiError}</Text>
                 </Center>
