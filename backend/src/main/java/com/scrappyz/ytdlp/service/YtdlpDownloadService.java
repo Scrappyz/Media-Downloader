@@ -288,7 +288,7 @@ public class YtdlpDownloadService implements DownloadService {
                     return parseError(line); // Or handle the error line as needed
                 }
             );
-        } catch(DownloadFailedException e) { // If something goes wrong with the download process or user cancelled
+        } catch(DownloadFailedException e) { // If something goes wrong with the download process
             log.info("[YtdlpDownloadService.download] Remove process with ID " + id + " because of error");
             downloadProcessHandler.removeProcessById(id);
             throw new DownloadFailedException();

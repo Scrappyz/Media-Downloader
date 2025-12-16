@@ -88,8 +88,6 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
             });
 
             int exitCode = process.waitFor();
-
-            processes.remove(id);
         } catch(IOException | InterruptedException e) {
             log.info("[YtdlpDownloadProcessHandler.runProcess] Download got interrupted");
             downloadProcess.setRunning(false);
@@ -98,7 +96,6 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
         }
 
         downloadProcess.setRunning(false);
-        log.info("Final Process Error: " + processResult.getError());
         return processResult;
     }
 
@@ -207,7 +204,3 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
     }
     
 }
-// Shoulder: 19 inches
-// Length: 24 inches
-// Arm: 13 inches
-// Waist: 38 inches
