@@ -325,51 +325,7 @@ public class YtdlpDownloadService implements DownloadService {
 
         // Handle errors
         ErrorCode error = processResult.getError();
-        try {
-            if(error == ErrorCode.INVALID_URL) {
-                log.info("[YtdlpDownloadService.download] Invalid URL");
-                emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(new ApiError(ErrorCode.INVALID_URL.getString(), "The URL provided is invalid"))
-                );
-            }
-
-            if(error == ErrorCode.UNSUPPORTED_URL) {
-                log.info("[YtdlpDownloadService.download] Unsupported URL");
-                emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(new ApiError(ErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is invalid"))
-                );
-            }
-
-            if(error == ErrorCode.FORMAT_UNAVAILABLE) {
-                log.info("[YtdlpDownloadService.download] Format unavailable");
-                emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(new ApiError(ErrorCode.FORMAT_UNAVAILABLE.getString(), "The URL provided is invalid"))
-                );
-            }
-
-            if(error == ErrorCode.POSTPROCESSING_ERROR) {
-                log.info("[YtdlpDownloadService.download] Postprocessing error");
-                emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(new ApiError(ErrorCode.POSTPROCESSING_ERROR.getString(), "There was a problem in postprocessing"))
-                );
-            }
-
-            if(error != null) {
-                emitter.complete();
-                return;
-            }
-
-        } catch(IOException e) {
-            log.info("[YtdlpDownloadService.download] Failed to send download failed status via SseEmitter");
-            emitter.completeWithError(e);
-            return;
-        } catch(IllegalStateException e) {
-            log.info("[YtdlpDownloadService.download] Emitter has already completed");
-        }
+        sendSseError(error, emitter);
 
         // ========DOWNLOAD COMPLETED SUCCESSFULLY========
 
@@ -608,6 +564,54 @@ public class YtdlpDownloadService implements DownloadService {
         }
 
         return Site.UNKNOWN;
+    }
+
+    private void sendSseError(ErrorCode error, SseEmitter emitter) {
+
+        try {
+            if(error == ErrorCode.INVALID_URL) {
+                log.info("[YtdlpDownloadService.download] Invalid URL");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(ErrorCode.INVALID_URL.getString(), "The URL provided is invalid"))
+                );
+            }
+
+            if(error == ErrorCode.UNSUPPORTED_URL) {
+                log.info("[YtdlpDownloadService.download] Unsupported URL");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(ErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is invalid"))
+                );
+            }
+
+            if(error == ErrorCode.FORMAT_UNAVAILABLE) {
+                log.info("[YtdlpDownloadService.download] Format unavailable");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(ErrorCode.FORMAT_UNAVAILABLE.getString(), "The URL provided is invalid"))
+                );
+            }
+
+            if(error == ErrorCode.POSTPROCESSING_ERROR) {
+                log.info("[YtdlpDownloadService.download] Postprocessing error");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(ErrorCode.POSTPROCESSING_ERROR.getString(), "There was a problem in postprocessing"))
+                );
+            }
+
+            if(error != null) {
+                emitter.complete();
+            }
+
+        } catch(IOException e) {
+            log.info("[YtdlpDownloadService.download] Failed to send download failed status via SseEmitter");
+            emitter.completeWithError(e);
+        } catch(IllegalStateException e) {
+            log.info("[YtdlpDownloadService.download] Emitter has already completed");
+        }
+
     }
     // ---HELPER METHODS---
 
