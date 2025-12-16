@@ -72,7 +72,7 @@ export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressDa
         };
     }, [requestId]);
 
-    return { status, progress, message };
+    return { status, code, progress, message };
 }
 
 export default useDownloadProgress;
