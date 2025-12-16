@@ -56,10 +56,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                             e.printStackTrace();
                         }
 
-                        log.info("Process Error: " + processResult.getError());
-
                         if(processResult.getError() != ErrorCode.NONE) {
-                            log.info("Stopping process for error");
                             processes.get(id).setReadable(false);
                             stopProcessById(id);
                         }
