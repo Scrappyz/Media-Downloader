@@ -588,7 +588,7 @@ public class YtdlpDownloadService implements DownloadService {
                 log.info("[YtdlpDownloadService.sendSseError] Unsupported URL");
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data(new ApiError(ErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is invalid"))
+                    .data(new ApiError(ErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is not supported"))
                 );
             }
 
@@ -596,7 +596,7 @@ public class YtdlpDownloadService implements DownloadService {
                 log.info("[YtdlpDownloadService.sendSseError] Format unavailable");
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data(new ApiError(ErrorCode.FORMAT_UNAVAILABLE.getString(), "The URL provided is invalid"))
+                    .data(new ApiError(ErrorCode.FORMAT_UNAVAILABLE.getString(), "The format requested is unavailable"))
                 );
             }
 
