@@ -580,7 +580,7 @@ public class YtdlpDownloadService implements DownloadService {
                 log.info("[YtdlpDownloadService.sendSseError] Invalid URL");
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data(new ApiError(ErrorCode.INVALID_URL.getString(), "The URL provided is invalid"))
+                    .data(new ApiError(ErrorCode.INVALID_URL.getString(), "The URL provided is not valid"))
                 );
             }
 
