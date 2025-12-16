@@ -10,20 +10,19 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration
 @EnableAsync
-public class AsyncResourceManagerConfig {
+public class AsyncStartupConfig {
 
-    @Bean(name = "resourceExecutor")
+    @Bean(name = "startupExecutor")
     public ThreadPoolTaskExecutor downloadsExecutor(
-        @Value("${resource.pool.core:2}") int core,
-        @Value("${resource.pool.max:4}") int max,
-        @Value("${resource.queue.capacity:50}") int queueCap) {
+        @Value("${resource.pool.core:1}") int core,
+        @Value("${resource.pool.max:1}") int max,
+        @Value("${resource.queue.capacity:1}") int queueCap) {
 
         ThreadPoolTaskExecutor ex = new ThreadPoolTaskExecutor();
-        ex.setThreadNamePrefix("resource-");
+        ex.setThreadNamePrefix("updater-");
         ex.setCorePoolSize(core);
         ex.setMaxPoolSize(max);
         ex.setQueueCapacity(queueCap);
-        // Reject when saturated → you’ll return HTTP 429
         ex.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         ex.initialize();
         return ex;

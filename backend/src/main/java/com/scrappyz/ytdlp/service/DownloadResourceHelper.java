@@ -4,15 +4,16 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.concurrent.DelayQueue;
 
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.scrappyz.ytdlp.config.PathProperties;
+import com.scrappyz.ytdlp.helper.ExpiringResource;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,27 +27,33 @@ public class DownloadResourceHelper {
 
     @Value("${resource.expiry.time}")
     private Duration resourceExpiryTime;
-    
-    @Async("resourceExecutor")
-    public void cleanup(String id) { // Delete downloaded resource after a certain time. Also cleanup
 
+    private final DelayQueue<ExpiringResource> queue = new DelayQueue<>();
+
+    // Run the resource helper for throughout the whole runtime
+    public void run() {
+        while(true) {
+            try {
+                ExpiringResource resource = queue.take();
+                String id = resource.getId();
+                Path resourcePath = paths.getDownloadPath().resolve(id).normalize();
+                
+                log.info("[DownloadResourceHelper.run] '" + id + "' has expired");
+                FileUtils.deleteDirectory(new File(resourcePath.toString()));
+            
+            } catch(IOException e) {
+                e.printStackTrace();
+            } catch(InterruptedException e) {
+                log.info("[DownloadResourceHelper.run] Resource Manager has been stopped");
+            }
+        }
+    }
+
+    // Add an item in the queue for expiry
+    public void queue(String id) {
         long expiryMillis = resourceExpiryTime.toMillis();
-
-        Path resourcePath = paths.getDownloadPath().resolve(id).normalize();
-
-        try {
-            log.info("[DownloadResourceHelper.cleanup] Waiting " + expiryMillis + "ms before deleting resource '" + id + "'");
-            Thread.sleep(expiryMillis);
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            log.info("[DownloadResourceHelper.cleanup] '" + id + "' has expired");
-            FileUtils.deleteDirectory(new File(resourcePath.toString()));
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
+        log.info("[DownloadResourceHelper.queue] '" + id + "' has been queued for expiry in " + expiryMillis + " ms");
+        queue.put(new ExpiringResource(id, expiryMillis));
     }
 
     public boolean removeResource(String id) {

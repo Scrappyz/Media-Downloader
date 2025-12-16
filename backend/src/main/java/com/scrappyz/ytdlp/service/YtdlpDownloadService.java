@@ -325,13 +325,14 @@ public class YtdlpDownloadService implements DownloadService {
         sendSseError(error, emitter);
 
         // ========DOWNLOAD COMPLETED SUCCESSFULLY========
+        log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
 
         result.setStatus(RequestStatus.SUCCESS.getString());
         result.setMessage("Download has finished");
 
-        resourceHelper.cleanup(id); // Cleanup resources in set time
+        resourceHelper.queue(id); // Cleanup resources in set time
 
-        log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
+        // log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
 
         try {
             emitter.send(SseEmitter.event() // Send final result
