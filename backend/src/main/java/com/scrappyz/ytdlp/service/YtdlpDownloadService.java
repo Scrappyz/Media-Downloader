@@ -527,6 +527,12 @@ public class YtdlpDownloadService implements DownloadService {
     }
 
     private ErrorCode parseError(String error) {
+        log.info("[YtdlpDownloadService.parseError] " + error);
+
+        if(!error.startsWith("ERROR:")) {
+            return ErrorCode.NONE;
+        }
+
         if(error.contains("Unsupported URL")) {
             return ErrorCode.UNSUPPORTED_URL;
         }
@@ -541,6 +547,10 @@ public class YtdlpDownloadService implements DownloadService {
 
         if(error.contains("Supported filetypes for thumbnail embedding")) {
             return ErrorCode.POSTPROCESSING_ERROR;
+        }
+
+        if(error.contains("[generic]")) {
+            return ErrorCode.FAILED_UNEXPECTEDLY;
         }
 
         return ErrorCode.NONE;
@@ -614,7 +624,7 @@ public class YtdlpDownloadService implements DownloadService {
             log.info("[YtdlpDownloadService.sendSseError] Failed to send download failed status via SseEmitter");
             emitter.completeWithError(e);
         } catch(IllegalStateException e) {
-            log.info("[YtdlpDownloadService.sendSseError] Emitter has already completed");
+            log.info("[YtdlpDownloadSe rvice.sendSseError] Emitter has already completed");
         }
 
     }
