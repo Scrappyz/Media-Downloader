@@ -606,7 +606,7 @@ public class YtdlpDownloadService implements DownloadService {
                 );
             }
 
-            if(error != null) {
+            if(error != ErrorCode.NONE) {
                 emitter.complete();
             }
 

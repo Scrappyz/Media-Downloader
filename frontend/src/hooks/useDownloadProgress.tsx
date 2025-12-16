@@ -49,6 +49,11 @@ export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressDa
             // console.log("Current Progress:", parsedData.progress);
         });
 
+        eventSource.addEventListener("error", (event: MessageEvent) => {
+            const parsedData = JSON.parse(event.data);
+            console.log("Error Update:", parsedData);
+        });
+
         eventSource.onerror = (error) => {
             console.error("SSE Error:", error);
             eventSource.close();
