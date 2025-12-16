@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.scrappyz.ytdlp.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.helper.YtdlpDownloadProcess;
 import com.scrappyz.ytdlp.helper.YtdlpProcessResult;
+import com.scrappyz.ytdlp.service.YtdlpDownloadService.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -46,10 +47,21 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
+                        ErrorCode error = ErrorCode.NONE;
+                        boolean readable = processes.get(id).isReadable();
                         try {
-                            processLineHandler.handle(line, emitter); // Pass null or appropriate SseEmitter
+                            error = processLineHandler.handle(line, emitter);
+                            if(readable) processResult.setError(error); // Pass null or appropriate SseEmitter
                         } catch (Exception e) {
                             e.printStackTrace();
+                        }
+
+                        log.info("Process Error: " + processResult.getError());
+
+                        if(processResult.getError() != ErrorCode.NONE) {
+                            log.info("Stopping process for error");
+                            processes.get(id).setReadable(false);
+                            stopProcessById(id);
                         }
                     }
                 } catch (IOException e) {
@@ -61,8 +73,11 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
+                        ErrorCode error = ErrorCode.NONE;
+                        boolean readable = processes.get(id).isReadable();
                         try {
-                            processResult.setError(errorLineHandler.handle(line)); // Pass null or appropriate SseEmitter
+                            error = errorLineHandler.handle(line);
+                            if(readable) processResult.setError(error); // Pass null or appropriate SseEmitter
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -74,10 +89,6 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
 
             int exitCode = process.waitFor();
 
-            if(exitCode != 0) {
-                throw new DownloadFailedException();
-            }
-
             processes.remove(id);
         } catch(IOException | InterruptedException e) {
             log.info("[YtdlpDownloadProcessHandler.runProcess] Download got interrupted");
@@ -87,6 +98,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
         }
 
         downloadProcess.setRunning(false);
+        log.info("Final Process Error: " + processResult.getError());
         return processResult;
     }
 
@@ -94,17 +106,14 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
         return processes.get(id);
     }
 
-    public void stopProcessById(String id, boolean force) {
-        log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process '" + id + "' is being stopped");
-        YtdlpDownloadProcess downloadProcess = processes.get(id);
-
+    public void stopProcess(YtdlpDownloadProcess downloadProcess, boolean cancel, boolean force) {
         if(downloadProcess == null) {
-            log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process '" + id + "' does not exist");
+            log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process does not exist");
             return;
         }
 
         if(!downloadProcess.isRunning()) {
-            log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process with '" + id + "' is no longer running");
+            log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process is no longer running");
             return;
         }
 
@@ -157,12 +166,22 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
             }
         }
 
-        processes.get(id).setCancelled(true);
-        processes.get(id).setRunning(false);
+        downloadProcess.setCancelled(cancel);
+        downloadProcess.setRunning(false);
+    }
+
+    public void cancelProcessById(String id) {
+        log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process '" + id + "' is being stopped");
+        YtdlpDownloadProcess downloadProcess = processes.get(id);
+
+        stopProcess(downloadProcess, true, true);
     }
 
     public void stopProcessById(String id) {
-        stopProcessById(id, true);
+        log.info("[YtdlpDownloadProcessHandler.stopProcessById] Process '" + id + "' is being stopped");
+        YtdlpDownloadProcess downloadProcess = processes.get(id);
+
+        stopProcess(downloadProcess, false, true);
     }
 
     public boolean hasProcess(String id) {

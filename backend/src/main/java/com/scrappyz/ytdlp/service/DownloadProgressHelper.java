@@ -10,6 +10,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.config.DownloadProperties;
 import com.scrappyz.ytdlp.dto.DownloadProgressResponse;
+import com.scrappyz.ytdlp.service.YtdlpDownloadService.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,8 +25,12 @@ public class DownloadProgressHelper {
     private int downloadsDone = 0;
     private boolean isMergeProcess = false; // Flag to indicate if the process involves a merge (e.g. "bestvideo+bestaudio")
 
-    public void processLine(String line, SseEmitter emitter) {
-        // log.info("[DownloadHelper.processLine] Output: " + line);
+    public ErrorCode processLine(String line, SseEmitter emitter) {
+        // log.info("[DownloadProgressHelper.processLine] Output: " + line);
+
+        if(line.startsWith("[youtube:tab]") && line.contains("Downloading playlist")) {
+            return ErrorCode.INVALID_URL;
+        }
 
         boolean isDownloadProgress = line.startsWith("[download]") && line.contains("%");
         if(line.startsWith("[info]") && line.contains("format(s):") && line.contains("+")) {
@@ -34,7 +39,7 @@ public class DownloadProgressHelper {
         float progressIncrement = downloadProperties.getProgressIncrement();
 
         if(!isDownloadProgress) {
-            return;
+            return ErrorCode.NONE;
         }
 
         int startIndex = "[download]".length() + 1;
@@ -56,7 +61,7 @@ public class DownloadProgressHelper {
         }
 
         if(progress < lastProgressPercentage + progressIncrement || progress >= 100.0f) {
-            return;
+            return ErrorCode.NONE;
         }
 
         lastProgressPercentage = progress;
@@ -84,6 +89,8 @@ public class DownloadProgressHelper {
         } catch(IllegalStateException e) {
             log.info("[DownloadHelper.processLine] Emitter has already completed");
         }
+
+        return ErrorCode.NONE;
         
     }
 

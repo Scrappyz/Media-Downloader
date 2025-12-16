@@ -16,7 +16,7 @@ public interface DownloadProcessHandler<T> {
 
     @FunctionalInterface
     interface ProcessLineHandler {
-        void handle(String line, SseEmitter emitter) throws Exception;
+        YtdlpDownloadService.ErrorCode handle(String line, SseEmitter emitter) throws Exception;
     }
 
     @FunctionalInterface

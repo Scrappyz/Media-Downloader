@@ -14,6 +14,7 @@ public class YtdlpDownloadProcess {
     private ExecutorService executorService;
     private boolean running;
     private boolean cancelled;
+    private boolean readable = true; // Prevents reading from stream
 
     public YtdlpDownloadProcess(Process process, ExecutorService executorService) {
         this.process = process;
