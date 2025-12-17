@@ -473,43 +473,45 @@ public class YtdlpDownloadService implements DownloadService {
         String videoCommand = "bestvideo";
         String audioCommand = "bestaudio";
 
+        boolean bestVideoQuality = vidQuality.equals("best");
+        boolean worstVideoQuality = vidQuality.equals("worst");
+        boolean bestAudioQuality = audQuality.equals("best");
+        boolean worstAudioQuality = audQuality.equals("worst");
+        boolean defaultVideoFormat = vidFormat.equals("default");
+        boolean defaultAudioFormat = audFormat.equals("default");
+
         if(isVideo || isVideoOnly) { // Process video command
 
-            if(vidQuality.equals("best")) {
+            if(bestVideoQuality) {
                 videoCommand += "";
-            } else if(vidQuality.equals("worst")) {
-                int lowestQuality = videoQuality.first();
-                videoCommand += String.format("[height<=%s]", lowestQuality);
+            } else if(worstVideoQuality) {
+                videoCommand = "worstvideo";
             } else {
                 videoCommand += String.format("[height<=%s]", vidQuality);
             }
             
-            if(!vidFormat.equals("default")) {
-                videoCommand += String.format("[ext=%s]", vidFormat);
-            } else {
+            if(defaultVideoFormat) {
                 videoCommand += "[ext=mp4]/" + videoCommand + "[ext=mkv]";
+            } else {
+                videoCommand += String.format("[ext=%s]", vidFormat);
             }
 
         } 
         
         if(isVideo || isAudioOnly) { // Process audio command
 
-            if(audFormat.equals("default")) {
-                if(audQuality.equals("best")) {
-                    audioCommand = "bestaudio[ext=flac]/bestaudio[ext=m4a]/bestaudio[ext=mp3]";
-                } else if(audQuality.equals("worst")) {
-                    audioCommand = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", 128, 128);
-                } else {
-                    audioCommand = String.format("bestaudio[ext=m4a][abr<=%s]/bestaudio[ext=mp3][abr<=%s]", audQuality, audQuality);
-                }
+            if(bestAudioQuality) {
+                audioCommand += "";
+            } else if(worstAudioQuality) {
+                audioCommand = "worstaudio";
             } else {
-                if(audQuality.equals("best")) {
-                    audioCommand = String.format("bestaudio[ext=%s]", audFormat);
-                } else if(audQuality.equals("worst")) {
-                    audioCommand = String.format("bestaudio[ext=%s][abr<=%s]", audFormat, 128);
-                } else {
-                    audioCommand = String.format("bestaudio[ext=%s][abr<=%s]", audFormat, audQuality);
-                }
+                audioCommand += String.format("[abr<=%s]", audQuality);
+            }
+
+            if(defaultAudioFormat) {
+                audioCommand += "[ext=flac]/" + audioCommand + "[ext=m4a]/" + audioCommand + "[ext=mp3]";
+            } else {
+                audioCommand += String.format("[ext=%s]", audFormat);
             }
 
         }
@@ -518,6 +520,17 @@ public class YtdlpDownloadService implements DownloadService {
 
         if(isVideo) {
             finalFormat = "(" + videoCommand + ")+(" + audioCommand + ")";
+            if(bestVideoQuality) { // Fallbacks
+                finalFormat += "/best";
+            } else if(worstVideoQuality) {
+                finalFormat += "/worst";
+            } else {
+                finalFormat += "/best" + String.format("[height<=%s]", vidQuality);
+            }
+
+            if(!defaultVideoFormat) {
+                finalFormat += String.format("[ext=%s]", vidFormat);
+            }
         } else if(isVideoOnly) {
             finalFormat = videoCommand;
         } else {
