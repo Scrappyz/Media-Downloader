@@ -13,6 +13,7 @@ import useDownloadProgress from './hooks/useDownloadProgress';
 import useWindowDimensions from './hooks/useWindowDimensions';
 
 import ProgressBar from './components/ProgressBar';
+import LabelWithTooltip from './components/LabelWithTooltip';
 
 interface DownloadRequest {
   requestType: string | undefined,
@@ -325,7 +326,7 @@ function App() {
         <Title order={2}>Media Downloader</Title>
         <form style={{width: 420, maxWidth: "100%"}} onSubmit={form.onSubmit((values) => handleSubmit(values))}>
           <Flex w='100%' direction="column" rowGap="lg">
-            <NativeSelect {...form.getInputProps('type')} label='Type' withAsterisk key={form.key("type")} data={mediaTypes} onChange={(e) => form.setFieldValue("type", e.currentTarget.value)} />
+            <NativeSelect {...form.getInputProps('type')} label="Type" withAsterisk key={form.key("type")} data={mediaTypes} onChange={(e) => form.setFieldValue("type", e.currentTarget.value)} />
             <Group w="100%" gap="0" align='flex-end'>
               <TextInput {...form.getInputProps('url')}
                 label='URL' withAsterisk key={form.key("url")} 
@@ -403,7 +404,7 @@ function App() {
           <Card.Section style={{overflowY: "auto"}}>
             <Flex direction="column" gap="sm">
               <Text size="sm">A <strong>full-stack web app</strong> for downloading videos or audio from <strong>multiple platforms</strong>. Built with <strong>React</strong> and <strong>Spring Boot</strong>, it features a mobile-first frontend and a multi-threaded backend to handle concurrent processing. The backend implements a <strong>REST API</strong> interface over <strong>yt-dlp</strong>, exposing its functionality via HTTP. The API is open-source and free to use.</Text>
-              <Text size="sm"><strong>Version:</strong> 1.0.0</Text>
+              <Text size="sm"><strong>Version:</strong> 1.0.1</Text>
               <Text size="sm"><strong>Built with:</strong> React + Spring Boot</Text>
               <Text size="sm"><strong>License:</strong> MIT</Text>
               <Text size="sm"><strong>GitHub:</strong> <a href="https://github.com/Scrappyz/Media-Downloader">View Repo</a></Text>
