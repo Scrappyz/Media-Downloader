@@ -92,7 +92,7 @@ function App() {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      console.log('Clipboard content:', text);
+      // console.log('Clipboard content:', text);
       form.setFieldValue("url", text);
     } catch (err: any) {
       console.error('Failed to read clipboard contents:', err);
@@ -153,9 +153,9 @@ function App() {
     setDownloadStatus(null);
     setRequestId(null);
 
-    console.log("Form Values:", values);
+    // console.log("Form Values:", values);
     const request = transformRequest(values);
-    console.log("Request Data:", request);
+    // console.log("Request Data:", request);
 
     try {
       const response = await fetch(api + "/downloads", {
@@ -172,7 +172,7 @@ function App() {
 
       const data = await response.json();
       setRequestId(data.requestId);
-      console.log(data.requestId);
+      // console.log(data.requestId);
       return data;
     } catch(error: any) {
       console.error(error);
@@ -195,7 +195,7 @@ function App() {
       }
 
       const data: StatusResponse = await response.json();
-      console.log("Cancel Data:", data);
+      // console.log("Cancel Data:", data);
 
       if(data.status === "success") {
         reset();
@@ -227,7 +227,7 @@ function App() {
 
       if(!response.ok) {
         const res: ApiError = await response.json();
-        console.log(res);
+        // console.log(res);
         setApiError(res.message);
         return;
       }
@@ -295,7 +295,7 @@ function App() {
     }
 
     if(status === "failed") {
-      console.log("failed");
+      // console.log("failed");
       setApiError(message);
       setDownloadProgress(0);
       setDownloadStatus(status);
