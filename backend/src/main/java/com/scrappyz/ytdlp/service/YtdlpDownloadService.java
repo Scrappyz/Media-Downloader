@@ -200,12 +200,12 @@ public class YtdlpDownloadService implements DownloadService {
 
         File directory = new File(resourcePath.toString());
         if(!directory.exists() || !directory.isDirectory()) {
-            throw new ResourceNotFoundException("[YtdlpDownloadService.getResource] Resource with request ID '" + id + "' could not be found");
+            throw new ResourceNotFoundException("The resource could not be found or has expired");
         }
 
         File[] files = directory.listFiles();
         if(files == null || files.length == 0) {
-            throw new ResourceNotFoundException("[YtdlpDownloadService.getResource] Resource with request ID '" + id + "' has no files");
+            throw new ResourceNotFoundException("The resource could not be found or has expired");
         }
 
         FileSystemResource resource = new FileSystemResource(files[0]);

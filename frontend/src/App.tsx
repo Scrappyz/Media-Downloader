@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Grid, Center, Card, Box, Divider } from '@mantine/core';
+import { useEffect, useState } from 'react';
+import { MantineProvider, Button, Flex, NativeSelect, TextInput, Group, Text, Title, Grid, Center, Card } from '@mantine/core';
 
 import { api, supportedSites } from './globals';
 import { useForm } from '@mantine/form';
@@ -222,13 +222,14 @@ function App() {
 
     try {
       const response = await fetch(url, {
-        method: "GET",
-        headers: { "Accept": "application/octet-stream" }
+        method: "GET"
       });
 
       if(!response.ok) {
         const res: ApiError = await response.json();
-        throw new Error(res.message);
+        console.log(res);
+        setApiError(res.message);
+        return;
       }
 
       const contentDisposition = response.headers.get("Content-Disposition");
@@ -262,7 +263,6 @@ function App() {
         chunks.push(value);
         receivedLength += value.length;
         setDownloadProgress(prev => prev = Math.floor((receivedLength / (contentLength ? parseInt(contentLength) : 1)) * 100));
-        // console.log(`Received ${receivedLength} of ${contentLength}: ${percentage}%`);
       }
 
       const blob = new Blob(chunks);
