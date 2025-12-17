@@ -1,17 +1,15 @@
 # CHANGELOG
 
-## [1.0.1] - TBR
+## [1.0.1] - 2025/12/17
 ### Added
 - Added more comprehensive error handling.
+
+### Changed
 - Improved resource expiry functionality.
 - Increased maximum concurrent requests.
 
 ### Fixed
 - Fixed issue with quality control.
-
-### To be added
-- Add tooltip in frontend.
-- Add error handling for expired resources.
 
 ## [1.0.0] - 2025/12/12
 
