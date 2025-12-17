@@ -3,6 +3,8 @@
 ## [1.0.1] - TBR
 ### Added
 - Added more comprehensive error handling.
+- Improved resource expiry functionality.
+- Increased maximum concurrent requests.
 
 ### Fixed
 - Fixed issue with quality control.
@@ -10,10 +12,6 @@
 ### To be added
 - Add tooltip in frontend.
 - Add error handling for expired resources.
-
-### To be changed
-- Revamp expiry mechanic with `DelayQueue`.
-- Increased maximum concurrent requests.
 
 ## [1.0.0] - 2025/12/12
 
