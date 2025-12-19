@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.1.0] - TBR
+### To be added
+- Storage limit functionality.
+- Retrieve resource via Request ID.
+
 ## [1.0.1] - 2025/12/17
 ### Added
 - Added more comprehensive error handling.
