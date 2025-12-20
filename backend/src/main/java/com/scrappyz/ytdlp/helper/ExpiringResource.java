@@ -12,9 +12,12 @@ public class ExpiringResource implements Delayed {
     private String id;
     private long expiryMillis;
 
-    public ExpiringResource(String id, long expiryMillis) {
+    private long fileSize;
+
+    public ExpiringResource(String id, long expiryMillis, long fileSize) {
         this.id = id;
         this.expiryMillis = System.currentTimeMillis() + expiryMillis;
+        this.fileSize = fileSize;
     }
 
     @Override

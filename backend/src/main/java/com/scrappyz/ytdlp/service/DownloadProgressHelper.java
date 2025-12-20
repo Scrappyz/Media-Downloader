@@ -53,7 +53,7 @@ public class DownloadProgressHelper {
         }
 
         // log.info("[DownloadHelper.processLine] Progress string: " + progressStr);
-        float progress = Float.parseFloat(progressStr.toString());
+        float progress = Float.parseFloat(progressStr.toString()); 
 
         if(progress >= 100.0f) {
             lastProgressPercentage = 0;

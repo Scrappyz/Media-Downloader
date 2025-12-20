@@ -1,6 +1,5 @@
 package com.scrappyz.ytdlp.service;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -196,19 +195,7 @@ public class YtdlpDownloadService implements DownloadService {
 
     @Override
     public FileSystemResource getResource(String id) throws ResourceNotFoundException {
-        Path resourcePath = paths.getDownloadPath().resolve(id).normalize();
-
-        File directory = new File(resourcePath.toString());
-        if(!directory.exists() || !directory.isDirectory()) {
-            throw new ResourceNotFoundException("The resource could not be found or has expired");
-        }
-
-        File[] files = directory.listFiles();
-        if(files == null || files.length == 0) {
-            throw new ResourceNotFoundException("The resource could not be found or has expired");
-        }
-
-        FileSystemResource resource = new FileSystemResource(files[0]);
+        FileSystemResource resource = new FileSystemResource(resourceHelper.getFile(id));
         return resource;
     }
 
