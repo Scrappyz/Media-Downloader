@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.scrappyz</groupId>
-	<artifactId>ytdlp</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>ytdlp</name>
+	<artifactId>downloader</artifactId>
+	<version>1.0.1</version>
+	<name>downloader</name>
 	<description>Downloader Demo</description>
 	<url/>
 	<licenses>
