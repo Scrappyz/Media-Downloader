@@ -11,6 +11,7 @@ public class YtdlpConfig {
     private boolean autoUpdate;
     private boolean useCookies;
     private String browserCookies;
+    private String cookiesPath;
     private String jsRuntime;
     
     public boolean isAutoUpdate() {
@@ -23,6 +24,10 @@ public class YtdlpConfig {
 
     public String getBrowserCookies() {
         return browserCookies;
+    }
+
+    public String getCookiesPath() {
+        return cookiesPath;
     }
 
     public String getJsRuntime() {
