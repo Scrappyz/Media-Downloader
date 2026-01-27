@@ -1,8 +1,4 @@
-// const address: string = "localhost"; // Use this for development
-// const address: string = "192.168.68.100"; // Enter the IPV4 address of your LAN here to expose to other devices on your network
-const http: string = "https";
-const address: string = `${http}://downloader.micoapp.org`; // Use this for development
-// const port: string = "8080";
+const address: string = import.meta.env.VITE_API_URL
 export const api: string = `${address}/api/v1`
 
 export const supportedSites: string[] = [
