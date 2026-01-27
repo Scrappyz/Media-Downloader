@@ -13,7 +13,6 @@ import useDownloadProgress from './hooks/useDownloadProgress';
 import useWindowDimensions from './hooks/useWindowDimensions';
 
 import ProgressBar from './components/ProgressBar';
-import LabelWithTooltip from './components/LabelWithTooltip';
 
 interface DownloadRequest {
   requestType: string | undefined,
@@ -37,6 +36,7 @@ interface ApiError {
 }
 
 function App() {
+  console.log("API URL:", api);
 
   const { height, width } = useWindowDimensions();
   const isMobile: boolean = width < 700;

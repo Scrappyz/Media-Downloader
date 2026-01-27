@@ -249,7 +249,14 @@ public class YtdlpDownloadService implements DownloadService {
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
         if(ytdlpConfig.isUseCookies()) {
-            commands.addAll(Arrays.asList("--cookies-from-browser", ytdlpConfig.getBrowserCookies(), "--js-runtime", ytdlpConfig.getJsRuntime()));
+            log.info("[YtdlpDownloadService.download] Cookies Path: " + ytdlpConfig.getCookiesPath());
+            if(ytdlpConfig.getCookiesPath() == null || ytdlpConfig.getCookiesPath().isEmpty()) { // Use browser
+                commands.addAll(Arrays.asList("--cookies-from-browser", ytdlpConfig.getBrowserCookies()));
+            } else {
+                commands.addAll(Arrays.asList("--cookies", ytdlpConfig.getCookiesPath()));
+            }
+
+            commands.addAll(Arrays.asList("--js-runtime", ytdlpConfig.getJsRuntime()));
         }
         if(request.isEmbedMetadata()) {
             commands.addAll(Arrays.asList("--embed-metadata", "--embed-thumbnail", "--convert-thumbnails", "jpg"));
