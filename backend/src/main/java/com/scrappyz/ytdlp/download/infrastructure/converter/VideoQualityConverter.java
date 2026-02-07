@@ -3,7 +3,9 @@ package com.scrappyz.ytdlp.download.infrastructure.converter;
 import com.scrappyz.ytdlp.download.infrastructure.model.VideoQuality;
 
 import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
 
+@Converter(autoApply = true)
 public class VideoQualityConverter implements AttributeConverter<VideoQuality, String> {
 
     @Override
