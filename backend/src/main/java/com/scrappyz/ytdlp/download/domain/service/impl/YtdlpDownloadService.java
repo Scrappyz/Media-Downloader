@@ -43,6 +43,11 @@ import com.scrappyz.ytdlp.download.domain.service.DownloadService;
 import com.scrappyz.ytdlp.download.domain.service.helper.DownloadProgressHelper;
 import com.scrappyz.ytdlp.download.domain.service.helper.DownloadResourceHelper;
 import com.scrappyz.ytdlp.download.domain.service.helper.YtdlpDownloadProcessHandler;
+import com.scrappyz.ytdlp.download.infrastructure.entity.Request;
+import com.scrappyz.ytdlp.download.infrastructure.entity.RequestDetail;
+import com.scrappyz.ytdlp.download.infrastructure.entity.Resource;
+import com.scrappyz.ytdlp.download.infrastructure.repository.RequestRepository;
+import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -61,6 +66,8 @@ public class YtdlpDownloadService implements DownloadService {
 
     @Qualifier("downloadExecutor")
     private final ExecutorService downloadExecutor;
+    private final RequestRepository requestRepository;
+    private final ResourceRepository resourceRepository;
 
     private final DownloadResourceHelper resourceHelper;
     private final YtdlpDownloadProcessHandler downloadProcessHandler;
@@ -169,11 +176,36 @@ public class YtdlpDownloadService implements DownloadService {
         }
     };
 
+    private Request createRequestEntity(String id, String status, DownloadRequest request) {
+        Request req = new Request();
+        req.setId(id);
+        // req.setStatus(status);
+        req.setCreatedAt(java.time.Instant.now());
+        
+        RequestDetail detail = new RequestDetail();
+        detail.setRequestId(id);
+        detail.setRequest(req);
+        detail.setUrl(request.getUrl());
+        detail.setRequestType(request.getRequestType());
+        detail.setVideoQuality(request.getVideoQuality());
+        detail.setVideoFormat(request.getVideoFormat());
+        detail.setAudioQuality(request.getAudioQuality());
+        detail.setAudioFormat(request.getAudioFormat());
+        detail.setMetadata(request.isEmbedMetadata());
+
+        req.setRequestDetail(detail);
+
+        return req;
+    }
+
     // Queue the download request
     @Override
     public DownloadResponse enqueue(DownloadRequest request) {
         DownloadResponse result = new DownloadResponse();
         String id = UlidCreator.getMonotonicUlid().toString();
+
+        Request req = createRequestEntity(id, RequestStatus.PENDING.getString(), request);
+        requestRepository.save(req);
 
         addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
         downloadExecutor.submit(() -> download(id, request));
@@ -328,6 +360,16 @@ public class YtdlpDownloadService implements DownloadService {
         resourceHelper.queue(id); // Cleanup resources in set time
 
         // log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
+
+        requestRepository.updateStatusById(id, "completed");
+
+        Resource resource = new Resource();
+        resource.setRequestId(id);
+        resource.setCreatedAt(java.time.Instant.now());
+        resource.setExpireAt(java.time.Instant.now().plus(resourceHelper.getResourceExpiryTime()));
+        resource.setStorageUsed(resourceHelper.getFileSize(id));
+
+        resourceRepository.save(resource);
 
         try {
             emitter.send(SseEmitter.event() // Send final result

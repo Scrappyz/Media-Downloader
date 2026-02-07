@@ -34,6 +34,10 @@ public class DownloadResourceHelper {
 
     private final DelayQueue<ExpiringResource> queue = new DelayQueue<>();
 
+    public Duration getResourceExpiryTime() {
+        return resourceExpiryTime;
+    }
+
     // Run the resource helper for throughout the whole runtime
     public void run() {
         log.info("[DownloadResourceHelper.run] Running resource manager");

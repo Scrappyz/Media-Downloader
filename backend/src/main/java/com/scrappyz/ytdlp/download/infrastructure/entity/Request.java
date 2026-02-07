@@ -2,6 +2,8 @@ package com.scrappyz.ytdlp.download.infrastructure.entity;
 
 import java.time.Instant;
 
+import com.scrappyz.ytdlp.download.infrastructure.model.RequestStatus;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,7 +26,7 @@ public class Request {
     private String id;
 
     @Column(name = "status", nullable = false)
-    private String status;
+    private RequestStatus status;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
