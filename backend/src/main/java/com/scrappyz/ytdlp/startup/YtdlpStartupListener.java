@@ -29,7 +29,7 @@ public class YtdlpStartupListener implements ApplicationListener<ApplicationRead
 
     private static final Logger log = LoggerFactory.getLogger(YtdlpStartupListener.class);
     
-    private final YtdlpProperties ytdlpConfig;
+    private final YtdlpProperties ytdlpProperties;
     private final PathProperties paths;
     private final DownloadResourceHelper resourceHelper;
     private final ExecutorService startupExecutor;
@@ -53,7 +53,7 @@ public class YtdlpStartupListener implements ApplicationListener<ApplicationRead
             }
         }
 
-        if(ytdlpConfig.isAutoUpdate()) {
+        if(ytdlpProperties.isAutoUpdate()) {
             startupExecutor.execute(() -> {
                 List<String> commands = Arrays.asList(paths.getYtdlpBin().toString(), "-U");
                 try {

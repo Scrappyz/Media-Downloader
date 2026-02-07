@@ -56,7 +56,7 @@ public class YtdlpDownloadService implements DownloadService {
     private final ObjectProvider<DownloadProgressHelper> progressHelperProvider;
     
     private final PathProperties paths;
-    private final YtdlpProperties ytdlpConfig;
+    private final YtdlpProperties ytdlpProperties;
     private final DownloadProperties downloadProperties;
 
     @Qualifier("downloadExecutor")
@@ -249,15 +249,15 @@ public class YtdlpDownloadService implements DownloadService {
         // Compile commands
         List<String> commands = new ArrayList<>();
         commands.add(paths.getYtdlpBin().toString());
-        if(ytdlpConfig.isUseCookies()) {
-            log.info("[YtdlpDownloadService.download] Cookies Path: " + ytdlpConfig.getCookiesPath());
-            if(ytdlpConfig.getCookiesPath() == null || ytdlpConfig.getCookiesPath().isEmpty()) { // Use browser
-                commands.addAll(Arrays.asList("--cookies-from-browser", ytdlpConfig.getBrowserCookies()));
+        if(ytdlpProperties.isUseCookies()) {
+            log.info("[YtdlpDownloadService.download] Cookies Path: " + ytdlpProperties.getCookiesPath());
+            if(ytdlpProperties.getCookiesPath() == null || ytdlpProperties.getCookiesPath().isEmpty()) { // Use browser
+                commands.addAll(Arrays.asList("--cookies-from-browser", ytdlpProperties.getBrowserCookies()));
             } else {
-                commands.addAll(Arrays.asList("--cookies", ytdlpConfig.getCookiesPath()));
+                commands.addAll(Arrays.asList("--cookies", ytdlpProperties.getCookiesPath()));
             }
 
-            commands.addAll(Arrays.asList("--js-runtime", ytdlpConfig.getJsRuntime()));
+            commands.addAll(Arrays.asList("--js-runtime", ytdlpProperties.getJsRuntime()));
         }
         if(request.isEmbedMetadata()) {
             commands.addAll(Arrays.asList("--embed-metadata", "--embed-thumbnail", "--convert-thumbnails", "jpg"));
