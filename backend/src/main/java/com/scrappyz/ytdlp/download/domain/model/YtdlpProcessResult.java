@@ -1,6 +1,6 @@
 package com.scrappyz.ytdlp.download.domain.model;
 
-import com.scrappyz.ytdlp.download.domain.service.YtdlpDownloadService.ErrorCode;
+import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService.ErrorCode;
 
 public class YtdlpProcessResult {
     

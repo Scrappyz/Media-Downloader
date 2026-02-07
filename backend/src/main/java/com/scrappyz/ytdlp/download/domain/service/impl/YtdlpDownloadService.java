@@ -1,4 +1,4 @@
-package com.scrappyz.ytdlp.download.domain.service;
+package com.scrappyz.ytdlp.download.domain.service.impl;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -39,6 +39,10 @@ import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.UnsupportedUrlException;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpProcessResult;
+import com.scrappyz.ytdlp.download.domain.service.DownloadService;
+import com.scrappyz.ytdlp.download.domain.service.helper.DownloadProgressHelper;
+import com.scrappyz.ytdlp.download.domain.service.helper.DownloadResourceHelper;
+import com.scrappyz.ytdlp.download.domain.service.helper.YtdlpDownloadProcessHandler;
 
 import lombok.RequiredArgsConstructor;
 

@@ -1,4 +1,4 @@
-package com.scrappyz.ytdlp.download.domain.service;
+package com.scrappyz.ytdlp.download.domain.service.helper;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,7 +16,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpDownloadProcess;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpProcessResult;
-import com.scrappyz.ytdlp.download.domain.service.YtdlpDownloadService.ErrorCode;
+import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 

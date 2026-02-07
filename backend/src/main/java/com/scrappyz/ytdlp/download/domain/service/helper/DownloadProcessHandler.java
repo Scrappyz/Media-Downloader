@@ -1,10 +1,11 @@
-package com.scrappyz.ytdlp.download.domain.service;
+package com.scrappyz.ytdlp.download.domain.service.helper;
 
 import java.util.List;
 
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
+import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService;
 
 public interface DownloadProcessHandler<T> {
 

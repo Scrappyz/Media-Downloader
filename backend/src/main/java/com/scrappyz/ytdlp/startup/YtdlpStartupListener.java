@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 
 import com.scrappyz.ytdlp.config.YtdlpConfig;
 import com.scrappyz.ytdlp.config.properties.PathProperties;
-import com.scrappyz.ytdlp.download.domain.service.DownloadResourceHelper;
+import com.scrappyz.ytdlp.download.domain.service.helper.DownloadResourceHelper;
 
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
