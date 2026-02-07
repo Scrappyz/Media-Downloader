@@ -15,8 +15,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
-import com.scrappyz.ytdlp.config.YtdlpConfig;
 import com.scrappyz.ytdlp.config.properties.PathProperties;
+import com.scrappyz.ytdlp.config.properties.YtdlpProperties;
 import com.scrappyz.ytdlp.download.domain.service.helper.DownloadResourceHelper;
 
 import jakarta.annotation.PreDestroy;
@@ -29,7 +29,7 @@ public class YtdlpStartupListener implements ApplicationListener<ApplicationRead
 
     private static final Logger log = LoggerFactory.getLogger(YtdlpStartupListener.class);
     
-    private final YtdlpConfig ytdlpConfig;
+    private final YtdlpProperties ytdlpConfig;
     private final PathProperties paths;
     private final DownloadResourceHelper resourceHelper;
     private final ExecutorService startupExecutor;

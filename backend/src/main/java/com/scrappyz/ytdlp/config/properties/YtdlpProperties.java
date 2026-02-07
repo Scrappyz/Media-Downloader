@@ -1,4 +1,4 @@
-package com.scrappyz.ytdlp.config;
+package com.scrappyz.ytdlp.config.properties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @ConfigurationProperties(prefix = "ytdlp")
 @Setter
-public class YtdlpConfig {
+public class YtdlpProperties {
     
     private boolean autoUpdate;
     private boolean useCookies;
