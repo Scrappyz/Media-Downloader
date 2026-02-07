@@ -20,7 +20,7 @@ public class PathProperties {
 
     @PostConstruct
     public void init() {
-        String bin = "";
+        // Removed unused variable 'bin'
         String os = System.getProperty("os.name", "unknown").toLowerCase();
 
         if(os.contains("win")) {

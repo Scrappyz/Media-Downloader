@@ -11,7 +11,7 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
-import com.scrappyz.ytdlp.interceptor.DownloadControllerInterceptor;
+import com.scrappyz.ytdlp.download.api.interceptor.DownloadControllerInterceptor;
 
 @Configuration
 public class CustomWebMvcConfig implements WebMvcConfigurer {
