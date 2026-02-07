@@ -1,4 +1,4 @@
-package com.scrappyz.ytdlp.config;
+package com.scrappyz.ytdlp.config.properties;
 
 import java.nio.file.Path;
 

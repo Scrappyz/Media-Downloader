@@ -15,8 +15,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
-import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.config.YtdlpConfig;
+import com.scrappyz.ytdlp.config.properties.PathProperties;
 import com.scrappyz.ytdlp.download.domain.service.DownloadResourceHelper;
 
 import jakarta.annotation.PreDestroy;

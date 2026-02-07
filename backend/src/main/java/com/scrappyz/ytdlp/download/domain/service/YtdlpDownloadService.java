@@ -24,9 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.github.f4b6a3.ulid.UlidCreator;
-import com.scrappyz.ytdlp.config.DownloadProperties;
-import com.scrappyz.ytdlp.config.PathProperties;
 import com.scrappyz.ytdlp.config.YtdlpConfig;
+import com.scrappyz.ytdlp.config.properties.DownloadProperties;
+import com.scrappyz.ytdlp.config.properties.PathProperties;
 import com.scrappyz.ytdlp.download.api.dto.ApiError;
 import com.scrappyz.ytdlp.download.api.dto.DownloadRequest;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResponse;

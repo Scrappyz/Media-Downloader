@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import com.scrappyz.ytdlp.config.DownloadProperties;
+import com.scrappyz.ytdlp.config.properties.DownloadProperties;
 import com.scrappyz.ytdlp.download.api.dto.DownloadProgressResponse;
 import com.scrappyz.ytdlp.download.domain.service.YtdlpDownloadService.ErrorCode;
 

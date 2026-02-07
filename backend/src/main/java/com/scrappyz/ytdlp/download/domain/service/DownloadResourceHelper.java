@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.scrappyz.ytdlp.config.PathProperties;
+import com.scrappyz.ytdlp.config.properties.PathProperties;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.download.domain.model.ExpiringResource;
 
