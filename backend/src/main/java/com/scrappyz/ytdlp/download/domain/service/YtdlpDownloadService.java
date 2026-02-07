@@ -236,7 +236,6 @@ public class YtdlpDownloadService implements DownloadService {
         log.info("[YtdlpDownloadService.download] Downloading: " + url);
 
         RequestType t = RequestType.getMediaType(type);
-        // Removed unused variables isVideo, isVideoOnly, isAudioOnly
 
         String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audQuality, audFormat);
         log.info("[YtdlpDownloadService.download] Command Format: " + format);
@@ -448,7 +447,9 @@ public class YtdlpDownloadService implements DownloadService {
 
     private String resolveCommandFormat(RequestType type, Site site, String vidFormat, String vidQuality, String audQuality, String audFormat) {
         
-        // Removed unused variables isVideo, isVideoOnly, isAudioOnly
+        boolean isVideo = (type == RequestType.VIDEO || type == RequestType.VIDEO_ONLY);
+        boolean isVideoOnly = type == RequestType.VIDEO_ONLY;
+        boolean isAudioOnly = type == RequestType.AUDIO_ONLY;
 
         if((isVideo || isVideoOnly) && !vidFormat.equals("default") && !videoFormat.contains(vidFormat)) {
             log.info("[YtdlpDownloadService.resolveCommandFormat] '" + vidFormat + "' is not available");

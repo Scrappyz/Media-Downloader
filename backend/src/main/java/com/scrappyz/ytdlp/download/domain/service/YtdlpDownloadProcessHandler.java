@@ -47,7 +47,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        // Removed unused variable 'error'
+                        ErrorCode error = ErrorCode.NONE; // Placeholder for error handling logic
                         boolean readable = processes.get(id).isReadable();
                         try {
                             processLineHandler.handle(line, emitter);
@@ -70,7 +70,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        // Removed unused variable 'error'
+                        ErrorCode error = ErrorCode.NONE;
                         boolean readable = processes.get(id).isReadable();
                         try {
                             errorLineHandler.handle(line);
