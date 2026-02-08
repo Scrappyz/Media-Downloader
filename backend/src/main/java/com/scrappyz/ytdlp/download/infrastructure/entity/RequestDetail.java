@@ -1,6 +1,18 @@
 package com.scrappyz.ytdlp.download.infrastructure.entity;
 
+import com.scrappyz.ytdlp.download.infrastructure.converter.AudioFormatConverter;
+import com.scrappyz.ytdlp.download.infrastructure.converter.AudioQualityConverter;
+import com.scrappyz.ytdlp.download.infrastructure.converter.RequestTypeConverter;
+import com.scrappyz.ytdlp.download.infrastructure.converter.VideoFormatConverter;
+import com.scrappyz.ytdlp.download.infrastructure.converter.VideoQualityConverter;
+import com.scrappyz.ytdlp.download.infrastructure.model.AudioFormat;
+import com.scrappyz.ytdlp.download.infrastructure.model.AudioQuality;
+import com.scrappyz.ytdlp.download.infrastructure.model.RequestType;
+import com.scrappyz.ytdlp.download.infrastructure.model.VideoFormat;
+import com.scrappyz.ytdlp.download.infrastructure.model.VideoQuality;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -26,19 +38,24 @@ public class RequestDetail {
     private String url;
 
     @Column(name = "request_type", nullable = false)
-    private String requestType;
+    @Convert(converter = RequestTypeConverter.class)
+    private RequestType requestType;
 
     @Column(name = "video_quality", nullable = true)
-    private String videoQuality;
+    @Convert(converter = VideoQualityConverter.class)
+    private VideoQuality videoQuality;
 
     @Column(name = "video_format", nullable = true)
-    private String videoFormat;
+    @Convert(converter = VideoFormatConverter.class)
+    private VideoFormat videoFormat;
 
     @Column(name = "audio_quality", nullable = true)
-    private String audioQuality;
+    @Convert(converter = AudioQualityConverter.class)
+    private AudioQuality audioQuality;
 
     @Column(name = "audio_format", nullable = true)
-    private String audioFormat;
+    @Convert(converter = AudioFormatConverter.class)
+    private AudioFormat audioFormat;
 
     @Column(name = "metadata", nullable = false)
     private boolean metadata;

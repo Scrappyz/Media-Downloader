@@ -46,6 +46,12 @@ import com.scrappyz.ytdlp.download.domain.service.helper.YtdlpDownloadProcessHan
 import com.scrappyz.ytdlp.download.infrastructure.entity.Request;
 import com.scrappyz.ytdlp.download.infrastructure.entity.RequestDetail;
 import com.scrappyz.ytdlp.download.infrastructure.entity.Resource;
+import com.scrappyz.ytdlp.download.infrastructure.model.AudioFormat;
+import com.scrappyz.ytdlp.download.infrastructure.model.AudioQuality;
+import com.scrappyz.ytdlp.download.infrastructure.model.RequestStatus;
+import com.scrappyz.ytdlp.download.infrastructure.model.RequestType;
+import com.scrappyz.ytdlp.download.infrastructure.model.VideoFormat;
+import com.scrappyz.ytdlp.download.infrastructure.model.VideoQuality;
 import com.scrappyz.ytdlp.download.infrastructure.repository.RequestRepository;
 import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
@@ -90,33 +96,6 @@ public class YtdlpDownloadService implements DownloadService {
     );
 
     private final ConcurrentHashMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
-
-    public enum RequestType {
-        VIDEO("video"),
-        VIDEO_ONLY("video_only"),
-        AUDIO_ONLY("audio_only");
-
-        private final String string;
-        private static final HashMap<String, RequestType> byString = new HashMap<>();
-
-        static {
-            for(RequestType t: values()) {
-                byString.put(t.string, t);
-            }
-        }
-
-        private RequestType(String string) {
-            this.string = string;
-        }
-
-        public String getString() {
-            return string;
-        }
-
-        public static RequestType getMediaType(String str) {
-            return byString.get(str);
-        }
-    };
 
     public enum Site {
         YOUTUBE("youtube"),
@@ -179,18 +158,18 @@ public class YtdlpDownloadService implements DownloadService {
     private Request createRequestEntity(String id, String status, DownloadRequest request) {
         Request req = new Request();
         req.setId(id);
-        // req.setStatus(status);
+        req.setStatus(RequestStatus.fromValue(status));
         req.setCreatedAt(java.time.Instant.now());
         
         RequestDetail detail = new RequestDetail();
         detail.setRequestId(id);
         detail.setRequest(req);
         detail.setUrl(request.getUrl());
-        detail.setRequestType(request.getRequestType());
-        detail.setVideoQuality(request.getVideoQuality());
-        detail.setVideoFormat(request.getVideoFormat());
-        detail.setAudioQuality(request.getAudioQuality());
-        detail.setAudioFormat(request.getAudioFormat());
+        detail.setRequestType(RequestType.fromValue(request.getRequestType()));
+        detail.setVideoQuality(VideoQuality.fromValue(request.getVideoQuality()));
+        detail.setVideoFormat(VideoFormat.fromValue(request.getVideoFormat()));
+        detail.setAudioQuality(AudioQuality.fromValue(request.getAudioQuality()));
+        detail.setAudioFormat(AudioFormat.fromValue(request.getAudioFormat()));
         detail.setMetadata(request.isEmbedMetadata());
 
         req.setRequestDetail(detail);
@@ -204,7 +183,7 @@ public class YtdlpDownloadService implements DownloadService {
         DownloadResponse result = new DownloadResponse();
         String id = UlidCreator.getMonotonicUlid().toString();
 
-        Request req = createRequestEntity(id, RequestStatus.PENDING.getString(), request);
+        Request req = createRequestEntity(id, "pending", request);
         requestRepository.save(req);
 
         addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
@@ -271,7 +250,7 @@ public class YtdlpDownloadService implements DownloadService {
 
         log.info("[YtdlpDownloadService.download] Downloading: " + url);
 
-        RequestType t = RequestType.getMediaType(type);
+        RequestType t = RequestType.fromValue(type);
 
         String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audQuality, audFormat);
         log.info("[YtdlpDownloadService.download] Command Format: " + format);
@@ -354,7 +333,7 @@ public class YtdlpDownloadService implements DownloadService {
         // ========DOWNLOAD COMPLETED SUCCESSFULLY========
         log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
 
-        result.setStatus(RequestStatus.SUCCESS.getString());
+        result.setStatus("completed");
         result.setMessage("Download has finished");
 
         resourceHelper.queue(id); // Cleanup resources in set time
