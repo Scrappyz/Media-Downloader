@@ -1,22 +1,9 @@
 package com.scrappyz.ytdlp.download.infrastructure.entity;
 
-import com.scrappyz.ytdlp.download.infrastructure.converter.AudioFormatConverter;
-import com.scrappyz.ytdlp.download.infrastructure.converter.AudioQualityConverter;
-import com.scrappyz.ytdlp.download.infrastructure.converter.RequestTypeConverter;
-import com.scrappyz.ytdlp.download.infrastructure.converter.VideoFormatConverter;
-import com.scrappyz.ytdlp.download.infrastructure.converter.VideoQualityConverter;
-import com.scrappyz.ytdlp.download.infrastructure.model.AudioFormat;
-import com.scrappyz.ytdlp.download.infrastructure.model.AudioQuality;
-import com.scrappyz.ytdlp.download.infrastructure.model.RequestType;
-import com.scrappyz.ytdlp.download.infrastructure.model.VideoFormat;
-import com.scrappyz.ytdlp.download.infrastructure.model.VideoQuality;
-
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
@@ -38,24 +25,19 @@ public class RequestDetail {
     private String url;
 
     @Column(name = "request_type", nullable = false)
-    @Convert(converter = RequestTypeConverter.class)
-    private RequestType requestType;
+    private String requestType;
 
     @Column(name = "video_quality", nullable = true)
-    @Convert(converter = VideoQualityConverter.class)
-    private VideoQuality videoQuality;
+    private String videoQuality;
 
     @Column(name = "video_format", nullable = true)
-    @Convert(converter = VideoFormatConverter.class)
-    private VideoFormat videoFormat;
+    private String videoFormat;
 
     @Column(name = "audio_quality", nullable = true)
-    @Convert(converter = AudioQualityConverter.class)
-    private AudioQuality audioQuality;
+    private String audioQuality;
 
     @Column(name = "audio_format", nullable = true)
-    @Convert(converter = AudioFormatConverter.class)
-    private AudioFormat audioFormat;
+    private String audioFormat;
 
     @Column(name = "metadata", nullable = false)
     private boolean metadata;
@@ -66,7 +48,6 @@ public class RequestDetail {
     private Long version;
 
     @OneToOne
-    @MapsId
     @JoinColumn(name = "request_id")
     private Request request;
     

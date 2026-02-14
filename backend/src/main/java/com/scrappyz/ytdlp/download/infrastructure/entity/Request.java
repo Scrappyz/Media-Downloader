@@ -2,12 +2,8 @@ package com.scrappyz.ytdlp.download.infrastructure.entity;
 
 import java.time.Instant;
 
-import com.scrappyz.ytdlp.download.infrastructure.converter.RequestStatusConverter;
-import com.scrappyz.ytdlp.download.infrastructure.model.RequestStatus;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
@@ -28,8 +24,7 @@ public class Request {
     private String id;
 
     @Column(name = "status", nullable = false)
-    @Convert(converter = RequestStatusConverter.class)
-    private RequestStatus status;
+    private String status;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -41,7 +36,7 @@ public class Request {
         mappedBy = "request",
         orphanRemoval = true,
         cascade = CascadeType.ALL,
-        fetch = FetchType.LAZY
+        fetch = FetchType.EAGER
     )
     private RequestDetail requestDetail;
 

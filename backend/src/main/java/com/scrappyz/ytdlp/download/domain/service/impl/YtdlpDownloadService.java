@@ -46,9 +46,7 @@ import com.scrappyz.ytdlp.download.domain.service.helper.DownloadResourceHelper;
 import com.scrappyz.ytdlp.download.domain.service.helper.YtdlpDownloadProcessHandler;
 import com.scrappyz.ytdlp.download.infrastructure.entity.Request;
 import com.scrappyz.ytdlp.download.infrastructure.entity.RequestDetail;
-import com.scrappyz.ytdlp.download.infrastructure.entity.Resource;
 import com.scrappyz.ytdlp.download.infrastructure.model.RequestType;
-import com.scrappyz.ytdlp.download.infrastructure.repository.RequestRepository;
 import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -69,7 +67,6 @@ public class YtdlpDownloadService implements DownloadService {
     @Qualifier("downloadExecutor")
     private final ExecutorService downloadExecutor;
 
-    private final RequestRepository requestRepository;
     private final ResourceRepository resourceRepository;
 
     private final DownloadRepositoryService downloadRepositoryService;
@@ -203,7 +200,7 @@ public class YtdlpDownloadService implements DownloadService {
         String id = UlidCreator.getMonotonicUlid().toString();
 
         Request req = createRequestEntity(id, "pending", request);
-        requestRepository.save(req);
+        downloadRepositoryService.addNewRequest(req);
 
         addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
         downloadExecutor.submit(() -> download(id, request));
@@ -360,16 +357,15 @@ public class YtdlpDownloadService implements DownloadService {
         // log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
 
         // requestRepository.updateStatusById(id, "completed");
-        downloadRepositoryService.updateRequestStatusById(id, "completed");
-
-        Resource resource = new Resource();
-        resource.setRequestId(id);
-        resource.setCreatedAt(java.time.Instant.now());
-        resource.setExpireAt(java.time.Instant.now().plus(resourceHelper.getResourceExpiryTime()));
-        resource.setStorageUsed(resourceHelper.getFileSize(id));
 
         try {
-            resourceRepository.save(resource);
+            downloadRepositoryService.updateRequestStatusById(id, "completed");
+            downloadRepositoryService.addNewResource(
+                id, 
+                java.time.Instant.now(), 
+                java.time.Instant.now().plus(resourceHelper.getResourceExpiryTime()), 
+                resourceHelper.getFileSize(id)
+            );
         } catch(Exception e) {
             e.printStackTrace();
         }
