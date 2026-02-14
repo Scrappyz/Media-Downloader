@@ -39,6 +39,7 @@ import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.UnsupportedUrlException;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpProcessResult;
+import com.scrappyz.ytdlp.download.domain.service.DownloadRepositoryService;
 import com.scrappyz.ytdlp.download.domain.service.DownloadService;
 import com.scrappyz.ytdlp.download.domain.service.helper.DownloadProgressHelper;
 import com.scrappyz.ytdlp.download.domain.service.helper.DownloadResourceHelper;
@@ -46,12 +47,7 @@ import com.scrappyz.ytdlp.download.domain.service.helper.YtdlpDownloadProcessHan
 import com.scrappyz.ytdlp.download.infrastructure.entity.Request;
 import com.scrappyz.ytdlp.download.infrastructure.entity.RequestDetail;
 import com.scrappyz.ytdlp.download.infrastructure.entity.Resource;
-import com.scrappyz.ytdlp.download.infrastructure.model.AudioFormat;
-import com.scrappyz.ytdlp.download.infrastructure.model.AudioQuality;
-import com.scrappyz.ytdlp.download.infrastructure.model.RequestStatus;
 import com.scrappyz.ytdlp.download.infrastructure.model.RequestType;
-import com.scrappyz.ytdlp.download.infrastructure.model.VideoFormat;
-import com.scrappyz.ytdlp.download.infrastructure.model.VideoQuality;
 import com.scrappyz.ytdlp.download.infrastructure.repository.RequestRepository;
 import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
@@ -72,8 +68,11 @@ public class YtdlpDownloadService implements DownloadService {
 
     @Qualifier("downloadExecutor")
     private final ExecutorService downloadExecutor;
+
     private final RequestRepository requestRepository;
     private final ResourceRepository resourceRepository;
+
+    private final DownloadRepositoryService downloadRepositoryService;
 
     private final DownloadResourceHelper resourceHelper;
     private final YtdlpDownloadProcessHandler downloadProcessHandler;
@@ -158,18 +157,18 @@ public class YtdlpDownloadService implements DownloadService {
     private Request createRequestEntity(String id, String status, DownloadRequest request) {
         Request req = new Request();
         req.setId(id);
-        req.setStatus(RequestStatus.fromValue(status));
+        req.setStatus(status);
         req.setCreatedAt(java.time.Instant.now());
         
         RequestDetail detail = new RequestDetail();
         detail.setRequestId(id);
         detail.setRequest(req);
         detail.setUrl(request.getUrl());
-        detail.setRequestType(RequestType.fromValue(request.getRequestType()));
-        detail.setVideoQuality(VideoQuality.fromValue(request.getVideoQuality()));
-        detail.setVideoFormat(VideoFormat.fromValue(request.getVideoFormat()));
-        detail.setAudioQuality(AudioQuality.fromValue(request.getAudioQuality()));
-        detail.setAudioFormat(AudioFormat.fromValue(request.getAudioFormat()));
+        detail.setRequestType(request.getRequestType());
+        detail.setVideoQuality(request.getVideoQuality());
+        detail.setVideoFormat(request.getVideoFormat());
+        detail.setAudioQuality(request.getAudioQuality());
+        detail.setAudioFormat(request.getAudioFormat());
         detail.setMetadata(request.isEmbedMetadata());
 
         req.setRequestDetail(detail);
@@ -177,9 +176,29 @@ public class YtdlpDownloadService implements DownloadService {
         return req;
     }
 
+    private void cleanDownloadRequest(DownloadRequest request) {
+        if(request.getVideoQuality() != null) {
+            request.setVideoQuality(request.getVideoQuality().trim().toLowerCase());
+        }
+
+        if(request.getAudioQuality() != null) {
+            request.setAudioQuality(request.getAudioQuality().trim().toLowerCase());
+        }
+
+        if(request.getVideoFormat() != null) {
+            request.setVideoFormat(request.getVideoFormat().trim().toLowerCase());
+        }
+
+        if(request.getAudioFormat() != null) {
+            request.setAudioFormat(request.getAudioFormat().trim().toLowerCase());
+        }
+    }
+
     // Queue the download request
     @Override
     public DownloadResponse enqueue(DownloadRequest request) {
+        cleanDownloadRequest(request); // Normalize values for easier processing later on
+        
         DownloadResponse result = new DownloadResponse();
         String id = UlidCreator.getMonotonicUlid().toString();
 
@@ -340,7 +359,8 @@ public class YtdlpDownloadService implements DownloadService {
 
         // log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
 
-        requestRepository.updateStatusById(id, "completed");
+        // requestRepository.updateStatusById(id, "completed");
+        downloadRepositoryService.updateRequestStatusById(id, "completed");
 
         Resource resource = new Resource();
         resource.setRequestId(id);
@@ -348,7 +368,11 @@ public class YtdlpDownloadService implements DownloadService {
         resource.setExpireAt(java.time.Instant.now().plus(resourceHelper.getResourceExpiryTime()));
         resource.setStorageUsed(resourceHelper.getFileSize(id));
 
-        resourceRepository.save(resource);
+        try {
+            resourceRepository.save(resource);
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
 
         try {
             emitter.send(SseEmitter.event() // Send final result
@@ -380,6 +404,8 @@ public class YtdlpDownloadService implements DownloadService {
         if(vidQuality.equals("worst")) {
             return "worst";
         }
+
+        vidQuality = vidQuality.replaceAll("[^0-9]", ""); // Remove non-numeric characters
 
         int numericQuality = Integer.parseInt(vidQuality);
         vidQuality = String.valueOf(numericQuality);
@@ -424,6 +450,8 @@ public class YtdlpDownloadService implements DownloadService {
         if(audQuality.equals("worst")) {
             return "worst";
         }
+
+        audQuality = audQuality.replaceAll("[^0-9]", ""); // Remove non-numeric characters
 
         int numericQuality = Integer.parseInt(audQuality);
         audQuality = String.valueOf(numericQuality);
