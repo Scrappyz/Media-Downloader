@@ -105,29 +105,11 @@ function App() {
     const request: DownloadRequest = {
       requestType: mediaTypeMap.get(values.type),
       url: values.url,
-      embedMetadata: (values.embedMetadata === "Yes") ? true : false
-    }
-
-    if(values.type === "Audio Only") {
-      if(values.audioFormat !== "Default") {
-        request.audioFormat = values.audioFormat;
-      }
-
-      if(values.audioQuality !== "Best" && values.audioQuality !== "Worse") {
-        request.audioQuality = parseInt(values.audioQuality);
-      } else {
-        request.audioQuality = values.audioQuality;
-      }
-    } else {
-      if(values.videoFormat !== "Default") {
-        request.videoFormat = values.videoFormat;
-      }
-
-      if(values.videoQuality !== "Best" && values.videoQuality !== "Worst") {
-        request.videoQuality = parseInt(values.videoQuality);
-      } else {
-        request.videoQuality = values.videoQuality;
-      }
+      embedMetadata: (values.embedMetadata === "Yes") ? true : false,
+      videoQuality: values.videoQuality,
+      videoFormat: values.videoFormat,
+      audioQuality: values.audioQuality,
+      audioFormat: values.audioFormat
     }
 
     return request;
