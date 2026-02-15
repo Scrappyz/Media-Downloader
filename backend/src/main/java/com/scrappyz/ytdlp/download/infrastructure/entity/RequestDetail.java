@@ -42,7 +42,6 @@ public class RequestDetail {
     @Column(name = "metadata", nullable = false)
     private boolean metadata;
 
-    // Add this to RequestDetail.java
     @Version
     @Column(name = "version")
     private Long version;

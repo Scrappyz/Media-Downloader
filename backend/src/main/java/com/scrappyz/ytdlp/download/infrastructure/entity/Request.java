@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -31,6 +32,10 @@ public class Request {
 
     @Column(name = "completed_at", nullable = true)
     private Instant completedAt;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 
     @OneToOne(
         mappedBy = "request",
