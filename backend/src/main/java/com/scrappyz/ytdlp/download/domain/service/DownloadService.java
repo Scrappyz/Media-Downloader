@@ -1,7 +1,5 @@
 package com.scrappyz.ytdlp.download.domain.service;
 
-import java.util.HashMap;
-
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
