@@ -72,7 +72,7 @@ public class YtdlpStartupListener implements ApplicationListener<ApplicationRead
             log.info("[YtdlpStartupListener.onApplicationEvent] Updating yt-dlp");
         }
 
-        // startupExecutor.execute(() -> resourceHelper.run()); // Expire resources
+        startupExecutor.execute(() -> resourceHelper.run()); // Expire resources
     }
 
     @PreDestroy

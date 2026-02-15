@@ -354,23 +354,9 @@ public class YtdlpDownloadService implements DownloadService {
 
         resourceHelper.queue(id); // Cleanup resources in set time
 
-        // log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
+        log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
 
-        // requestRepository.updateStatusById(id, "completed");
-
-        try {
-            downloadRepositoryService.updateRequestStatusById(id, "completed");
-            downloadRepositoryService.addNewResource(
-                id, 
-                java.time.Instant.now(), 
-                java.time.Instant.now().plus(resourceHelper.getResourceExpiryTime()), 
-                resourceHelper.getFileSize(id)
-            );
-        } catch(Exception e) {
-            e.printStackTrace();
-        }
-
-        try {
+        try { 
             emitter.send(SseEmitter.event() // Send final result
                 .name("status")
                 .data(result)
@@ -383,6 +369,18 @@ public class YtdlpDownloadService implements DownloadService {
         }
 
         emitter.complete();
+
+        try {
+            downloadRepositoryService.updateRequestStatusById(id, "completed");
+            downloadRepositoryService.addNewResource(
+                id, 
+                java.time.Instant.now(), 
+                java.time.Instant.now().plus(resourceHelper.getResourceExpiryTime()), 
+                resourceHelper.getFileSize(id)
+            );
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // ---HELPER METHODS---
