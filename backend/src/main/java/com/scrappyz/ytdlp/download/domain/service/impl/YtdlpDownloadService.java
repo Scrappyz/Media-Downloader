@@ -227,6 +227,7 @@ public class YtdlpDownloadService implements DownloadService {
     @Override
     public FileSystemResource getResource(String id) throws ResourceNotFoundException {
         FileSystemResource resource = new FileSystemResource(resourceHelper.getFile(id));
+        downloadRepositoryService.incrementFetchCountByRequestId(id);
         return resource;
     }
 
@@ -371,7 +372,7 @@ public class YtdlpDownloadService implements DownloadService {
         emitter.complete();
 
         try {
-            downloadRepositoryService.updateRequestStatusById(id, "completed");
+            downloadRepositoryService.completeRequestById(id);
             downloadRepositoryService.addNewResource(
                 id, 
                 java.time.Instant.now(), 

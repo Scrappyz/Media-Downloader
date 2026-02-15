@@ -33,6 +33,9 @@ public class Resource {
     @Column(name = "storage_used", nullable = false)
     private long storageUsed;
 
+    @Column(name = "fetch_count", nullable = false)
+    private int fetchCount;
+
     @Version
     @Column(name = "version")
     private Long version;

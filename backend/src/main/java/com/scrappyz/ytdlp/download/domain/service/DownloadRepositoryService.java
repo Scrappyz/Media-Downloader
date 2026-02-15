@@ -23,13 +23,13 @@ public class DownloadRepositoryService {
     public void addNewRequest(Request request) {
         requestRepository.save(request);
     }
-    
+
     @Transactional
-    public void updateRequestStatusById(String requestId, String status) {
+    public void completeRequestById(String requestId) {
         Request request = requestRepository.findById(requestId)
             .orElseThrow(() -> new IllegalArgumentException("Request not found with ID: " + requestId));
-
-        request.setStatus(status);
+        request.setStatus("completed");
+        request.setCompletedAt(Instant.now());
     }
 
     @Transactional
@@ -46,4 +46,12 @@ public class DownloadRepositoryService {
 
         resourceRepository.save(resource);
     }
+
+    @Transactional
+    public void incrementFetchCountByRequestId(String requestId) {
+        Resource resource = resourceRepository.findById(requestId)
+            .orElseThrow(() -> new IllegalArgumentException("Request not found with ID: " + requestId));
+        resource.setFetchCount(resource.getFetchCount() + 1);
+    }
+
 }
