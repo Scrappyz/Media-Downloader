@@ -12,8 +12,10 @@ interface ProgressData {
     message: string | null
 }
 
+type DownloadStatus = 'pending' | 'ongoing' | 'failed' | 'completed' | null;
+
 export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressData => {
-    const [status, setStatus] = useState<string | null>(null);
+    const [status, setStatus] = useState<DownloadStatus>(null);
     const [code, setCode] = useState<string | null>(null);
     const [progress, setProgress] = useState<number>(0);
     const [message, setMessage] = useState<string | null>(null);
@@ -37,12 +39,11 @@ export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressDa
         eventSource.addEventListener("status", (event: MessageEvent) => {
             const parsedData = JSON.parse(event.data);
             console.log("Status Update:", parsedData);
-            if(parsedData.status === "success" || parsedData.status === "cancelled") {
+            if(parsedData.status === "completed" || parsedData.status === "cancelled") {
                 reset();
                 eventSource.close();
             }
             setStatus(parsedData.status);
-            // console.log("Current Status:", parsedData.status);
         });
 
         eventSource.addEventListener("progress", (event: MessageEvent) => {
@@ -50,12 +51,11 @@ export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressDa
             console.log("Progress Update:", parsedData);
             setProgress(parsedData.progress);
             setMessage(parsedData.message);
-            // console.log("Current Progress:", parsedData.progress);
         });
 
         eventSource.addEventListener("error", (event: MessageEvent) => {
             const parsedData = JSON.parse(event.data);
-            console.log("Error Update:", parsedData);
+            console.error("Error Update:", parsedData);
             setStatus("failed");
             setCode(parsedData.code);
             setProgress(0);

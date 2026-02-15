@@ -13,7 +13,6 @@ export const useWindowDimensions = () => {
   useEffect(() => {
     function handleResize() {
       setWindowDimensions(getWindowDimensions());
-      // console.log(windowDimensions.height, windowDimensions.width);
     }
 
     // Add event listener for window resize

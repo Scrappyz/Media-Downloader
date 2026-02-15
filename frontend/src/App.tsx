@@ -36,7 +36,6 @@ interface ApiError {
 }
 
 function App() {
-  console.log("API URL:", api);
 
   const { height, width } = useWindowDimensions();
   const isMobile: boolean = width < 700;
@@ -93,7 +92,6 @@ function App() {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      // console.log('Clipboard content:', text);
       form.setFieldValue("url", text);
     } catch (err: any) {
       console.error('Failed to read clipboard contents:', err);
@@ -106,10 +104,13 @@ function App() {
       requestType: mediaTypeMap.get(values.type),
       url: values.url,
       embedMetadata: (values.embedMetadata === "Yes") ? true : false,
-      videoQuality: values.videoQuality,
-      videoFormat: values.videoFormat,
-      audioQuality: values.audioQuality,
-      audioFormat: values.audioFormat
+    }
+
+    if(request.requestType === "video" || request.requestType === "video_only") {
+      request.videoQuality = values.videoQuality;
+      request.videoFormat = values.videoFormat;
+    } else if(request.requestType === "audio_only") {
+      request.audioQuality = values.audioQuality;
     }
 
     return request;
@@ -136,9 +137,7 @@ function App() {
     setDownloadStatus(null);
     setRequestId(null);
 
-    // console.log("Form Values:", values);
     const request = transformRequest(values);
-    // console.log("Request Data:", request);
 
     try {
       const response = await fetch(api + "/downloads", {
@@ -155,7 +154,6 @@ function App() {
 
       const data = await response.json();
       setRequestId(data.requestId);
-      // console.log(data.requestId);
       return data;
     } catch(error: any) {
       console.error(error);
@@ -178,9 +176,8 @@ function App() {
       }
 
       const data: StatusResponse = await response.json();
-      // console.log("Cancel Data:", data);
 
-      if(data.status === "success") {
+      if(data.status === "completed") {
         reset();
       }
 
@@ -210,7 +207,6 @@ function App() {
 
       if(!response.ok) {
         const res: ApiError = await response.json();
-        // console.log(res);
         setApiError(res.message);
         return;
       }
@@ -278,7 +274,6 @@ function App() {
     }
 
     if(status === "failed") {
-      // console.log("failed");
       setApiError(message);
       setDownloadProgress(0);
       setDownloadStatus(status);
@@ -286,7 +281,7 @@ function App() {
       return;
     }
 
-    if(status !== "success") return;
+    if(status !== "completed") return;
 
     setDownloadStatus(status);
     setIsSubmitted(false);
@@ -345,7 +340,7 @@ function App() {
             </Grid>
             {
               !isSubmitted && (
-                <Button bg={color.light[0]} type='submit' disabled={isDownloaded}>Start {downloadStatus === "success" ? "Another" : ""} Download</Button>
+                <Button bg={color.light[0]} type='submit' disabled={isDownloaded}>Start {downloadStatus === "completed" ? "Another" : ""} Download</Button>
               )
             }
             {
@@ -362,7 +357,7 @@ function App() {
               )
             }
             {
-              downloadStatus === "success" && !isDownloaded && (
+              downloadStatus === "completed" && !isDownloaded && (
                 <Button type='button' disabled={isDownloaded} bg={color.light[0]} onClick={() => downloadFile()}>Get File</Button>
               )
             }
