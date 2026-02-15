@@ -364,7 +364,7 @@ function App() {
             {
               apiError !== null && (
                 <Center>
-                  <Text c={color.light[0]}>ERROR: {apiError}</Text>
+                  <Text style={{textAlign: 'center'}} c={color.light[0]}>ERROR: {apiError}</Text>
                 </Center>
               )
             }

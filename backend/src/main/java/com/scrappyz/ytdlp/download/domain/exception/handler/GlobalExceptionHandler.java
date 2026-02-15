@@ -8,6 +8,7 @@ import com.scrappyz.ytdlp.download.api.dto.ApiError;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ApiException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadCancelledException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
+import com.scrappyz.ytdlp.download.domain.exception.custom.ExpiredResourceException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FailedProcessException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FullDownloadQueueException;
@@ -33,6 +34,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiError> handleMissingResource(ResourceNotFoundException e) {
+        ApiError error = new ApiError(e.getCode(), e.getMessage());
+        return ResponseEntity.internalServerError().body(error);
+    }
+
+    @ExceptionHandler(ExpiredResourceException.class)
+    public ResponseEntity<ApiError> handleMissingResource(ExpiredResourceException e) {
         ApiError error = new ApiError(e.getCode(), e.getMessage());
         return ResponseEntity.internalServerError().body(error);
     }

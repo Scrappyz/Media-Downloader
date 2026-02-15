@@ -48,6 +48,13 @@ public class DownloadRepositoryService {
     }
 
     @Transactional
+    public void deleteResourceByRequestId(String requestId) {
+        Resource resource = resourceRepository.findById(requestId)
+            .orElseThrow(() -> new IllegalArgumentException("Resource not found with request ID: " + requestId));
+        resourceRepository.delete(resource);
+    }
+
+    @Transactional
     public void incrementFetchCountByRequestId(String requestId) {
         Resource resource = resourceRepository.findById(requestId)
             .orElseThrow(() -> new IllegalArgumentException("Request not found with ID: " + requestId));

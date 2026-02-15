@@ -2,6 +2,7 @@ package com.scrappyz.ytdlp.download.domain.service.impl;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -32,6 +33,7 @@ import com.scrappyz.ytdlp.download.api.dto.DownloadRequest;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResponse;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResult;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
+import com.scrappyz.ytdlp.download.domain.exception.custom.ExpiredResourceException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FailedProcessException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidProcessException;
@@ -46,6 +48,7 @@ import com.scrappyz.ytdlp.download.domain.service.helper.DownloadResourceHelper;
 import com.scrappyz.ytdlp.download.domain.service.helper.YtdlpDownloadProcessHandler;
 import com.scrappyz.ytdlp.download.infrastructure.entity.Request;
 import com.scrappyz.ytdlp.download.infrastructure.entity.RequestDetail;
+import com.scrappyz.ytdlp.download.infrastructure.entity.Resource;
 import com.scrappyz.ytdlp.download.infrastructure.model.RequestType;
 import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
@@ -226,8 +229,15 @@ public class YtdlpDownloadService implements DownloadService {
 
     @Override
     public FileSystemResource getResource(String id) throws ResourceNotFoundException {
+        Resource r = resourceRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Resource not found with request ID: " + id));
+        
+        if(r.getExpireAt() != null && r.getExpireAt().isBefore(Instant.now())) {
+            throw new ExpiredResourceException("Resource with request ID " + id + " has expired");
+        }
+
         FileSystemResource resource = new FileSystemResource(resourceHelper.getFile(id));
         downloadRepositoryService.incrementFetchCountByRequestId(id);
+        
         return resource;
     }
 
