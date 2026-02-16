@@ -25,6 +25,13 @@ public class DownloadRepositoryService {
     }
 
     @Transactional
+    public void updateRequestStatusById(String requestId, String status) {
+        Request request = requestRepository.findById(requestId)
+            .orElseThrow(() -> new IllegalArgumentException("Request not found with ID: " + requestId));
+        request.setStatus(status);
+    }
+
+    @Transactional
     public void completeRequestById(String requestId) {
         Request request = requestRepository.findById(requestId)
             .orElseThrow(() -> new IllegalArgumentException("Request not found with ID: " + requestId));

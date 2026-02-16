@@ -176,8 +176,8 @@ function App() {
       }
 
       const data: StatusResponse = await response.json();
-
-      if(data.status === "completed") {
+      console.log("Cancel Response:", data);
+      if(data.status === "cancelled") {
         reset();
       }
 

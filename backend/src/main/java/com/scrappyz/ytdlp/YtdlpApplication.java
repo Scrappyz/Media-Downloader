@@ -11,4 +11,3 @@ public class YtdlpApplication {
 	}
 
 }
-// Fix bug where download finishes but is not being sent to the frontend. Perhaps frontend is the problem or the last endpoint.

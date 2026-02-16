@@ -12,7 +12,7 @@ interface ProgressData {
     message: string | null
 }
 
-type DownloadStatus = 'pending' | 'ongoing' | 'failed' | 'completed' | null;
+type DownloadStatus = 'pending' | 'ongoing' | 'failed' | 'completed' | 'cancelled' | null;
 
 export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressData => {
     const [status, setStatus] = useState<DownloadStatus>(null);

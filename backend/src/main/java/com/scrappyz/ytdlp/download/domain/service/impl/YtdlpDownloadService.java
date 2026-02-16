@@ -202,6 +202,7 @@ public class YtdlpDownloadService implements DownloadService {
         DownloadResponse result = new DownloadResponse();
         String id = UlidCreator.getMonotonicUlid().toString();
 
+        // Set as 'pending' in the database
         Request req = createRequestEntity(id, "pending", request);
         downloadRepositoryService.addNewRequest(req);
 
@@ -306,6 +307,13 @@ public class YtdlpDownloadService implements DownloadService {
 
         log.info("[YtdlpDownloadService.download] Download Commands: " + String.join(" ", commands));
 
+        // Set request as 'ongoing' in database
+        try {
+            downloadRepositoryService.updateRequestStatusById(id, "ongoing");
+        } catch(Exception e) {
+            log.info("[YtdlpDownloadService.download] Failed to update request status to ongoing for request ID " + id);
+        }
+
         // Run the download process
         YtdlpProcessResult processResult = new YtdlpProcessResult();
         try {
@@ -324,6 +332,7 @@ public class YtdlpDownloadService implements DownloadService {
         } catch(DownloadFailedException e) { // If something goes wrong with the download process
             log.info("[YtdlpDownloadService.download] Remove process with ID " + id + " because of error");
             downloadProcessHandler.removeProcessById(id);
+            downloadRepositoryService.updateRequestStatusById(id, "failed");
             throw new DownloadFailedException();
         }
 
@@ -344,6 +353,10 @@ public class YtdlpDownloadService implements DownloadService {
             }
 
             downloadProcessHandler.removeProcessById(id);
+
+            // Set request to 'cancelled' in database
+            downloadRepositoryService.updateRequestStatusById(id, "cancelled");
+
             emitter.complete();
             resourceHelper.removeResource(id); // Remove any partially downloaded resources
             return;
@@ -367,6 +380,19 @@ public class YtdlpDownloadService implements DownloadService {
 
         log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
 
+        // Set request to 'completed' in database and add resource details
+        try {
+            downloadRepositoryService.completeRequestById(id);
+            downloadRepositoryService.addNewResource(
+                id, 
+                java.time.Instant.now(),
+                java.time.Instant.now().plus(resourceHelper.getResourceExpiryTime()), 
+                resourceHelper.getFileSize(id)
+            );
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+
         try { 
             emitter.send(SseEmitter.event() // Send final result
                 .name("status")
@@ -380,18 +406,6 @@ public class YtdlpDownloadService implements DownloadService {
         }
 
         emitter.complete();
-
-        try {
-            downloadRepositoryService.completeRequestById(id);
-            downloadRepositoryService.addNewResource(
-                id, 
-                java.time.Instant.now(), 
-                java.time.Instant.now().plus(resourceHelper.getResourceExpiryTime()), 
-                resourceHelper.getFileSize(id)
-            );
-        } catch(Exception e) {
-            e.printStackTrace();
-        }
     }
 
     // ---HELPER METHODS---

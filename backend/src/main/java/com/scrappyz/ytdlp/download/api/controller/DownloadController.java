@@ -96,7 +96,7 @@ public class DownloadController {
 
         DownloadCancelResponse response = new DownloadCancelResponse();
 
-        response.setStatus("success");
+        response.setStatus("cancelled");
         response.setMessage("Request was cancelled successfully");
 
         downloadService.cancelDownload(requestId);
