@@ -325,8 +325,8 @@ function App() {
             <NativeSelect {...form.getInputProps('type')} label="Type" withAsterisk key={form.key("type")} data={mediaTypes} onChange={(e) => form.setFieldValue("type", e.currentTarget.value)} />
             <Group w="100%" gap="0" align='flex-end'>
               <TextInput {...form.getInputProps('url')}
-                label='URL' withAsterisk key={form.key("url")} 
-                placeholder='Enter link here'
+                label='URL / Request ID' withAsterisk key={form.key("url")} 
+                placeholder='Enter a link or a previous request ID here'
                 w="100%"
                 rightSection={
                   <Button type='button' bg={color.light[0]} radius={2} onClick={handlePaste} h='100%' w='100%' p={0} m={0}>Paste</Button>
