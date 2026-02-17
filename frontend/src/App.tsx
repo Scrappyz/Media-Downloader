@@ -71,14 +71,15 @@ function App() {
       audioQuality: "Best",
       audioFormat: "Default",
       embedMetadata: "Yes",
-      outputName: ""
+      outputName: "",
+      requestId: requestId || ""
     },
     validate: {
       url: (value) => {
         try {
           new URL(value);
           return null;
-        } catch (error) {
+        } catch (error: any) {
           return "Invalid URL";
         }
       }
@@ -89,6 +90,8 @@ function App() {
   const type = form.getValues().type;
   const isVideo: boolean = (type === "Video" || type === "Video Only");
 
+  const [copyText, setCopyText] = useState("Copy");
+
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -96,6 +99,21 @@ function App() {
     } catch (err: any) {
       console.error('Failed to read clipboard contents:', err);
       return null; 
+    }
+  }
+
+  const handleCopy = async () => {
+    try {
+      const requestId = form.getValues().requestId;
+      if(!requestId) {
+        return;
+      }
+      await navigator.clipboard.writeText(requestId);
+      setCopyText("Copied!");
+      setTimeout(() => setCopyText("Copy"), 1500);
+    } catch (err: any) {
+      console.error('Failed to copy to clipboard:', err);
+      return null;
     }
   }
 
@@ -154,6 +172,7 @@ function App() {
 
       const data = await response.json();
       setRequestId(data.requestId);
+      form.setFieldValue("requestId", data.requestId);
       return data;
     } catch(error: any) {
       console.error(error);
@@ -338,6 +357,18 @@ function App() {
                 />
               </Grid.Col>
             </Grid>
+            <Group w="100%" gap="0" align='flex-end'>
+              <TextInput {...form.getInputProps('requestId')}
+                label='Generated Request ID'
+                placeholder='Copy request ID here to use later'
+                w="100%"
+                readOnly
+                rightSection={
+                  <Button type='button' bg={(copyText === 'Copy') ? color.light[0] : color.disabled[0]} radius={2} onClick={handleCopy} h='100%' w='100%' p={0} m={0}>{copyText}</Button>
+                }
+                rightSectionWidth={75}
+              />
+            </Group>
             {
               !isSubmitted && (
                 <Button bg={color.light[0]} type='submit' disabled={isDownloaded}>Start {downloadStatus === "completed" ? "Another" : ""} Download</Button>
