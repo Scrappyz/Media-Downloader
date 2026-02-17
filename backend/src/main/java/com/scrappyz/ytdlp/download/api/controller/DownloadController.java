@@ -43,13 +43,24 @@ public class DownloadController {
         return ResponseEntity.ok().body(response);
     }
 
-    @GetMapping("/{requestId}")
+    @GetMapping("/{requestId}/status")
     public SseEmitter checkRequest(@PathVariable String requestId) throws InvalidUlidException {
         if(!Ulid.isValid(requestId)) {
             throw new InvalidUlidException();
         }
 
         return downloadService.getEmitter(requestId); // Subscribe to SSE events for this request
+    }
+
+    @GetMapping("/{requestId}")
+    public ResponseEntity<DownloadRequest> getRequest(@PathVariable String requestId) throws InvalidUlidException {
+        if(!Ulid.isValid(requestId)) {
+            throw new InvalidUlidException();
+        }
+
+        DownloadRequest request = downloadService.getDownloadRequest(requestId);
+        
+        return ResponseEntity.ok().body(request);
     }
 
     @GetMapping("/{requestId}/file")

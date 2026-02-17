@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 
 interface SSEParameters {
     requestId: string,
-    url: string | null
+    url?: string,
+    prevStatus?: DownloadStatus
 }
 
 interface ProgressData {
@@ -14,7 +15,7 @@ interface ProgressData {
 
 type DownloadStatus = 'pending' | 'ongoing' | 'failed' | 'completed' | 'cancelled' | null;
 
-export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressData => {
+export const useDownloadProgress = ({requestId, url, prevStatus}: SSEParameters): ProgressData => {
     const [status, setStatus] = useState<DownloadStatus>(null);
     const [code, setCode] = useState<string | null>(null);
     const [progress, setProgress] = useState<number>(0);
@@ -28,7 +29,8 @@ export const useDownloadProgress = ({requestId, url}: SSEParameters): ProgressDa
     }
 
     useEffect(() => {
-        if(!requestId || !url) return;
+        if(!requestId || !url || (prevStatus === 'completed' || prevStatus === 'ongoing')) return;
+        console.log("Establishing SSE connection with URL:", url);
 
         const eventSource = new EventSource(url);
 

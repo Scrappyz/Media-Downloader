@@ -7,5 +7,6 @@ import lombok.Setter;
 public class DownloadResponse {
 
     private String requestId;
+    private String status;
 
 }

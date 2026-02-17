@@ -16,4 +16,6 @@ public interface DownloadService {
 
     public void cancelDownload(String id);
 
+    public DownloadRequest getDownloadRequest(String id);
+
 }

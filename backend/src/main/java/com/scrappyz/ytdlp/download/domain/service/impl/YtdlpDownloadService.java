@@ -24,6 +24,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.github.f4b6a3.ulid.Ulid;
 import com.github.f4b6a3.ulid.UlidCreator;
 import com.scrappyz.ytdlp.config.properties.DownloadProperties;
 import com.scrappyz.ytdlp.config.properties.PathProperties;
@@ -50,6 +51,7 @@ import com.scrappyz.ytdlp.download.infrastructure.entity.Request;
 import com.scrappyz.ytdlp.download.infrastructure.entity.RequestDetail;
 import com.scrappyz.ytdlp.download.infrastructure.entity.Resource;
 import com.scrappyz.ytdlp.download.infrastructure.model.RequestType;
+import com.scrappyz.ytdlp.download.infrastructure.repository.RequestRepository;
 import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -70,6 +72,7 @@ public class YtdlpDownloadService implements DownloadService {
     @Qualifier("downloadExecutor")
     private final ExecutorService downloadExecutor;
 
+    private final RequestRepository requestRepository;
     private final ResourceRepository resourceRepository;
 
     private final DownloadRepositoryService downloadRepositoryService;
@@ -197,21 +200,63 @@ public class YtdlpDownloadService implements DownloadService {
     // Queue the download request
     @Override
     public DownloadResponse enqueue(DownloadRequest request) {
+        boolean isPreviousRequest = Ulid.isValid(request.getUrl()); // If a request ID is provided in the URL field
+
         cleanDownloadRequest(request); // Normalize values for easier processing later on
         
         DownloadResponse result = new DownloadResponse();
-        String id = UlidCreator.getMonotonicUlid().toString();
+        String id = isPreviousRequest ? request.getUrl() : UlidCreator.getMonotonicUlid().toString();
+        String status = "pending";
 
-        // Set as 'pending' in the database
-        Request req = createRequestEntity(id, "pending", request);
-        downloadRepositoryService.addNewRequest(req);
+        if(isPreviousRequest) {
+            log.info("[YtdlpDownloadService.enqueue] Previous request with ID " + id + " is being re-queued");
 
-        addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
-        downloadExecutor.submit(() -> download(id, request));
+            // If the request is already completed, return the same request with the same ID and status
+            Request existingReq = requestRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("No request found with ID: " + id));
+            RequestDetail detail = existingReq.getRequestDetail();
+
+            request.setUrl(detail.getUrl());
+            request.setRequestType(detail.getRequestType());
+            request.setVideoQuality(detail.getVideoQuality());
+            request.setVideoFormat(detail.getVideoFormat());
+            request.setAudioQuality(detail.getAudioQuality());
+            request.setAudioFormat(detail.getAudioFormat());
+            request.setEmbedMetadata(detail.isMetadata());
+
+            status = existingReq.getStatus();
+
+        } else {
+            // Set as 'pending' in the database
+            Request req = createRequestEntity(id, "pending", request);
+            downloadRepositoryService.addNewRequest(req);
+        }
+
+        if(!status.equals("completed") && !status.equals("ongoing")) { // If the request is not already completed or ongoing, start the download process
+            addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
+            downloadExecutor.submit(() -> download(id, request));
+        }
 
         result.setRequestId(id);
+        result.setStatus(status);
 
         return result;
+    }
+
+    @Override
+    public DownloadRequest getDownloadRequest(String id) {
+        Request req = requestRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("No request found with ID: " + id));
+        RequestDetail detail = req.getRequestDetail();
+
+        DownloadRequest downloadRequest = new DownloadRequest();
+        downloadRequest.setUrl(detail.getUrl());
+        downloadRequest.setRequestType(detail.getRequestType());
+        downloadRequest.setVideoQuality(detail.getVideoQuality());
+        downloadRequest.setVideoFormat(detail.getVideoFormat());
+        downloadRequest.setAudioQuality(detail.getAudioQuality());
+        downloadRequest.setAudioFormat(detail.getAudioFormat());
+        downloadRequest.setEmbedMetadata(detail.isMetadata());
+
+        return downloadRequest;
     }
 
     @Override

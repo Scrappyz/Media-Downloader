@@ -17,9 +17,9 @@ import ProgressBar from './components/ProgressBar';
 interface DownloadRequest {
   requestType: string | undefined,
   url: string,
-  videoQuality?: string | number,
+  videoQuality?: string,
   videoFormat?: string,
-  audioQuality?: string | number,
+  audioQuality?: string,
   audioFormat?: string,
   embedMetadata: boolean,
   outputName?: string
@@ -35,6 +35,7 @@ interface ApiError {
   message: string
 }
 
+// Fix problem with SSE connection causing error if download is already completed or ongoing when user pastes request ID
 function App() {
 
   const { height, width } = useWindowDimensions();
@@ -47,13 +48,13 @@ function App() {
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const { status, code, progress, message } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}`) : null});
+  const { status, code, progress, message } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}/status`) : null, status: downloadStatus || undefined});
 
   const mediaTypes: string[] = ["Video", "Video Only", "Audio Only"];
-  const videoQualities: string[] = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"];
+  const videoQualities: string[] = ["Best", "2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p", "Worst"];
   const videoFormats: string[] = ["mp4"];
-  const audioQualities: string[] = ["320kbps", "256kbps", "192kbps", "128kbps"];
-  const audioFormats: string[] = [];
+  const audioQualities: string[] = ["Best", "320kbps", "256kbps", "192kbps", "128kbps", "Worst"];
+  const audioFormats: string[] = ["Default"];
 
   const mediaTypeMap = new Map<string, string>([
     ["Video", "video"],
@@ -76,11 +77,15 @@ function App() {
     },
     validate: {
       url: (value) => {
+        if(isUlid(value)) {
+          return null;
+        }
+
         try {
           new URL(value);
           return null;
         } catch (error: any) {
-          return "Invalid URL";
+          return "Invalid URL / Request ID";
         }
       }
     }
@@ -92,10 +97,78 @@ function App() {
 
   const [copyText, setCopyText] = useState("Copy");
 
+  const capitalizeFirstLetter = (str: string): string => {
+    if(!str) {
+      return str;
+    }
+
+    const firstLetter = str.charAt(0).toUpperCase();
+    const restOfString = str.slice(1);
+
+    return firstLetter + restOfString;
+  }
+
+  const patchRequestForm = (values: DownloadRequest) => {
+    let requestType: string = "Video";
+
+    for(const [key, value] of mediaTypeMap.entries()) {
+      if(value === values.requestType) {
+        requestType = key;
+        break;
+      }
+    }
+
+    let videoQuality: string = values.videoQuality ? values.videoQuality : "Best";
+    let videoFormat: string = values.videoFormat ? values.videoFormat : "Default";
+    let audioQuality: string = values.audioQuality ? values.audioQuality : "Best";
+    let audioFormat: string = values.audioFormat ? values.audioFormat : "Default";
+
+    if(videoQuality === "best" || videoQuality === "worst") {
+      videoQuality = capitalizeFirstLetter(videoQuality);
+    }
+
+    if(audioQuality === "best" || audioQuality === "worst") {
+      audioQuality = capitalizeFirstLetter(audioQuality);
+    }
+
+    if(videoFormat === "default") {
+      videoFormat = capitalizeFirstLetter(videoFormat);
+    }
+
+    if(audioFormat === "default") {
+      audioFormat = capitalizeFirstLetter(audioFormat);
+    }
+
+    form.setFieldValue("type", requestType);
+    form.setFieldValue("videoQuality", videoQuality);
+    form.setFieldValue("videoFormat", videoFormat);
+    form.setFieldValue("audioQuality", audioQuality);
+    form.setFieldValue("audioFormat", audioFormat);
+    form.setFieldValue("embedMetadata", values.embedMetadata ? "Yes" : "No");
+  }
+
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
       form.setFieldValue("url", text);
+      
+      if(isUlid(text)) {
+        setRequestId(text);
+        form.setFieldValue("requestId", text);
+        const response = await fetch(api + `/downloads/${encodeURIComponent(text)}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          }
+        });
+
+        if(!response.ok) {
+          throw new Error(`Response status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        patchRequestForm(data);
+      }
     } catch (err: any) {
       console.error('Failed to read clipboard contents:', err);
       return null; 
@@ -132,6 +205,11 @@ function App() {
     }
 
     return request;
+  }
+
+  const isUlid = (str: string): boolean => {
+    const ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+    return ulidRegex.test(str);
   }
 
   const reset = () => {
@@ -172,6 +250,7 @@ function App() {
 
       const data = await response.json();
       setRequestId(data.requestId);
+      setDownloadStatus(data.status);
       form.setFieldValue("requestId", data.requestId);
       return data;
     } catch(error: any) {
@@ -307,6 +386,13 @@ function App() {
   }, [status]);
 
   useEffect(() => {
+    if(downloadStatus === "completed") {
+      setDownloadProgress(0);
+      setIsSubmitted(false);
+    }
+  }, [downloadStatus])
+
+  useEffect(() => {
     setDownloadProgress(prev => prev = progress);
   }, [progress])
 
@@ -337,13 +423,13 @@ function App() {
             {
               isVideo ? (
                 <Grid justify='space-between'>
-                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={["Best", ...videoQualities, "Worst"]} /></Grid.Col>
-                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={["Default", ...videoFormats]} /></Grid.Col>
+                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('videoQuality')} label='Video Quality' withAsterisk key={form.key("videoQuality")} data={videoQualities} /></Grid.Col>
+                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('videoFormat')} label='Video Format' withAsterisk key={form.key("videoFormat")} data={videoFormats} /></Grid.Col>
                 </Grid>
               ) : (
                 <Grid justify='space-between'>
-                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('audioQuality')} label='Audio Quality' withAsterisk key={form.key("audioQuality")} data={["Best", ...audioQualities, "Worse"]} /></Grid.Col>
-                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={["Default", ...audioFormats]} /></Grid.Col>
+                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('audioQuality')} label='Audio Quality' withAsterisk key={form.key("audioQuality")} data={audioQualities} /></Grid.Col>
+                  <Grid.Col span={6}><NativeSelect w='100%' {...form.getInputProps('audioFormat')} label='Audio Format' withAsterisk key={form.key("audioFormat")} data={audioFormats} /></Grid.Col>
                 </Grid>
               )
             }
@@ -375,7 +461,7 @@ function App() {
               )
             }
             {
-              (isSubmitted) && (
+              (isSubmitted && downloadStatus !== 'completed') && (
                 <>
                   <Button type='button' bg={color.light[0]} disabled={isCancelled || !requestId} onClick={cancelRequest}>Cancel</Button>
                   <ProgressBar progress={downloadProgress} message={progressBarMessage} style={{fillColor: color.light[0]}} />
@@ -383,7 +469,7 @@ function App() {
               )
             }
             {
-              (isDownloaded) && (
+              isDownloaded && (
                 <ProgressBar progress={downloadProgress} message={progressBarMessage} style={{fillColor: color.light[0]}} />
               )
             }
