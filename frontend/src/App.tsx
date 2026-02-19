@@ -148,7 +148,7 @@ function App() {
           throw new Error(`Response status: ${response.status}`);
         }
 
-        const data = await response.json();
+        const data: DownloadRequest = await response.json();
         patchRequestForm(data);
       }
     } catch (err: any) {
@@ -235,7 +235,7 @@ function App() {
       setRequestId(data.requestId);
       setDownloadStatus(data.status);
       form.setFieldValue("requestId", data.requestId);
-      
+
       return data;
     } catch(error: any) {
       console.error(error);
