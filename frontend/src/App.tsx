@@ -14,28 +14,10 @@ import useWindowDimensions from './hooks/useWindowDimensions';
 
 import ProgressBar from './components/ProgressBar';
 
-interface DownloadRequest {
-  requestType: string | undefined,
-  url: string,
-  videoQuality?: string,
-  videoFormat?: string,
-  audioQuality?: string,
-  audioFormat?: string,
-  embedMetadata: boolean,
-  outputName?: string
-};
-
-interface StatusResponse {
-  status: string,
-  message: string | null
-};
-
-interface ApiError {
-  code: string,
-  message: string
-}
+import type { DownloadStatus, DownloadRequest, DownloadResponse, StatusResponse, ApiError } from './types/download';
 
 // Fix problem with SSE connection causing error if download is already completed or ongoing when user pastes request ID
+// Solution: If request ID returns completed, do not run SSE hook
 function App() {
 
   const { height, width } = useWindowDimensions();
@@ -43,12 +25,12 @@ function App() {
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
-  const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
+  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const { status, code, progress, message } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}/status`) : null, status: downloadStatus || undefined});
+  const { status, code, progress, message } = useDownloadProgress({requestId: requestId || "", url: requestId ? (api + `/downloads/${encodeURIComponent(requestId)}/status`) : null, downloadStatus: downloadStatus});
 
   const mediaTypes: string[] = ["Video", "Video Only", "Audio Only"];
   const videoQualities: string[] = ["Best", "2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p", "Worst"];
@@ -155,7 +137,7 @@ function App() {
       if(isUlid(text)) {
         setRequestId(text);
         form.setFieldValue("requestId", text);
-        const response = await fetch(api + `/downloads/${encodeURIComponent(text)}`, {
+        const response: Response = await fetch(api + `/downloads/${encodeURIComponent(text)}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -248,10 +230,12 @@ function App() {
         throw new Error(`Response status: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data: DownloadResponse = await response.json();
+
       setRequestId(data.requestId);
       setDownloadStatus(data.status);
       form.setFieldValue("requestId", data.requestId);
+      
       return data;
     } catch(error: any) {
       console.error(error);
