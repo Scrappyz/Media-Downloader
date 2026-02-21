@@ -230,7 +230,7 @@ public class YtdlpDownloadService implements DownloadService {
         }
 
         if(!status.equals("completed") && !status.equals("ongoing")) { // If the request is not already completed or ongoing, start the download process
-            sseService.addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
+            sseService.addEmitter(id, downloadProperties.getTimeout().toMillis());
             downloadExecutor.submit(() -> download(id, request));
         }
 

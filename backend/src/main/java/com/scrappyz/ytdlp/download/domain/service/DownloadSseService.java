@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.download.domain.model.DownloadProgress;
+import com.scrappyz.ytdlp.download.domain.model.SseStatus;
 
 @Service
 public class DownloadSseService {
@@ -14,9 +15,28 @@ public class DownloadSseService {
 
     private final ConcurrentHashMap<String, DownloadProgress> progressMap = new ConcurrentHashMap<>();
 
-    public void addEmitter(String id, SseEmitter emitter) {
+    private final ConcurrentHashMap<String, SseStatus> statusMap = new ConcurrentHashMap<>();
+
+    public void addEmitter(String id, Long timeout) {
+        SseEmitter emitter = new SseEmitter(timeout);
         emitters.put(id, emitter);
+        statusMap.put(id, SseStatus.ACTIVE);
+
+        emitter.onCompletion(() -> {
+            if(statusMap.get(id) != SseStatus.ERROR) {
+                statusMap.put(id, SseStatus.COMPLETED);
+            }
+        });
+
+        emitter.onError(throwable -> {
+            statusMap.put(id, SseStatus.ERROR);
+        });
+
         progressMap.put(id, new DownloadProgress(0, "pending", null));
+    }
+
+    public void addEmitter(String id) {
+        addEmitter(id, 0L);
     }
 
     public void removeEmitter(String id) {

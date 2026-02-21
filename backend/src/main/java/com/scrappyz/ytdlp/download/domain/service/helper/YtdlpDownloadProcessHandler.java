@@ -77,9 +77,9 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                                 .data(progressResponse)
                             );
                         } catch(IOException e) {
-                            log.info("[DownloadHelper.processLine] Failed to send progress update via SseEmitter");
+                            log.info("[YtdlpProcessResult.processLine] Failed to send progress update via SseEmitter");
                         } catch(IllegalStateException e) {
-                            log.info("[DownloadHelper.processLine] Emitter has already completed");
+                            log.info("[YtdlpProcessResult.processLine] Emitter has already completed");
                         }
                     }
                 } catch (IOException e) {
