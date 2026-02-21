@@ -2,8 +2,6 @@ package com.scrappyz.ytdlp.download.domain.service.helper;
 
 import java.util.List;
 
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService;
 
@@ -11,13 +9,12 @@ public interface DownloadProcessHandler<T> {
 
     T runProcess(List<String> commands,
                  String id,
-                 SseEmitter emitter,
                  ProcessLineHandler processLineHandler,
                  ErrorLineHandler errorLineHandler) throws DownloadFailedException;
 
     @FunctionalInterface
     interface ProcessLineHandler {
-        YtdlpDownloadService.ErrorCode handle(String line, SseEmitter emitter) throws Exception;
+        YtdlpDownloadService.ErrorCode handle(String line, String id) throws Exception;
     }
 
     @FunctionalInterface

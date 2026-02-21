@@ -16,7 +16,7 @@ public class DownloadSseService {
 
     public void addEmitter(String id, SseEmitter emitter) {
         emitters.put(id, emitter);
-        progressMap.put(id, new DownloadProgress(0, "pending"));
+        progressMap.put(id, new DownloadProgress(0, "pending", null));
     }
 
     public void removeEmitter(String id) {
@@ -25,11 +25,20 @@ public class DownloadSseService {
         progressMap.remove(id);
     }
 
-    public void setProgress(String id, float percentage, String status) {
+    public SseEmitter getEmitter(String id) {
+        return emitters.get(id);
+    }
+
+    public DownloadProgress getProgress(String id) {
+        return progressMap.get(id);
+    }
+
+    public void setProgress(String id, float percentage, String status, String message) {
         DownloadProgress progress = progressMap.get(id);
         if(progress != null) {
             progress.setPercentage(percentage);
             progress.setStatus(status);
+            progress.setMessage(message);
         }
     }
 }

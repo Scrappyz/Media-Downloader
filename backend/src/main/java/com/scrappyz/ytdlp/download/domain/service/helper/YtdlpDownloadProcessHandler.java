@@ -13,9 +13,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.scrappyz.ytdlp.download.api.dto.DownloadProgressResponse;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
+import com.scrappyz.ytdlp.download.domain.model.DownloadProgress;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpDownloadProcess;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpProcessResult;
+import com.scrappyz.ytdlp.download.domain.service.DownloadSseService;
 import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
@@ -26,12 +29,15 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
 
     private static final Logger log = LoggerFactory.getLogger(YtdlpDownloadProcessHandler.class);
 
+    private final DownloadSseService sseService;
+
     private final ConcurrentHashMap<String, YtdlpDownloadProcess> processes = new ConcurrentHashMap<>();
     
     @Override
-    public YtdlpProcessResult runProcess(List<String> commands, String id, SseEmitter emitter, ProcessLineHandler processLineHandler, ErrorLineHandler errorLineHandler) throws DownloadFailedException {
+    public YtdlpProcessResult runProcess(List<String> commands, String id, ProcessLineHandler processLineHandler, ErrorLineHandler errorLineHandler) throws DownloadFailedException {
         YtdlpProcessResult processResult = new YtdlpProcessResult();
         YtdlpDownloadProcess downloadProcess = new YtdlpDownloadProcess();
+        SseEmitter emitter = sseService.getEmitter(id);
         
         try {
             ProcessBuilder pb = new ProcessBuilder(commands);
@@ -49,9 +55,10 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                     while ((line = reader.readLine()) != null) {
                         ErrorCode error = ErrorCode.NONE; // Placeholder for error handling logic
                         boolean readable = processes.get(id).isReadable();
+
                         try {
-                            processLineHandler.handle(line, emitter);
-                            if(readable) processResult.setError(error); // Pass null or appropriate SseEmitter
+                            error = processLineHandler.handle(line, id);
+                            if(readable) processResult.setError(error);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -59,6 +66,20 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                         if(processResult.getError() != ErrorCode.NONE) {
                             processes.get(id).setReadable(false);
                             stopProcessById(id);
+                            continue;
+                        }
+
+                        DownloadProgress progress = sseService.getProgress(id);
+                        DownloadProgressResponse progressResponse = new DownloadProgressResponse(progress.getPercentage(), progress.getMessage());
+                        try {
+                            emitter.send(SseEmitter.event()
+                                .name("progress")
+                                .data(progressResponse)
+                            );
+                        } catch(IOException e) {
+                            log.info("[DownloadHelper.processLine] Failed to send progress update via SseEmitter");
+                        } catch(IllegalStateException e) {
+                            log.info("[DownloadHelper.processLine] Emitter has already completed");
                         }
                     }
                 } catch (IOException e) {

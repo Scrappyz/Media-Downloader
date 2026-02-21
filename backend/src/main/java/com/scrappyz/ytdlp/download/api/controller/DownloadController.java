@@ -23,6 +23,7 @@ import com.scrappyz.ytdlp.download.api.dto.DownloadRequest;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResponse;
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUlidException;
 import com.scrappyz.ytdlp.download.domain.service.DownloadService;
+import com.scrappyz.ytdlp.download.domain.service.DownloadSseService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -35,6 +36,8 @@ public class DownloadController {
 
     @Qualifier("ytdlp")
     private final DownloadService downloadService;
+
+    private final DownloadSseService sseService;
     
     @PostMapping
     public ResponseEntity<DownloadResponse> download(@RequestBody DownloadRequest request) {
@@ -49,7 +52,7 @@ public class DownloadController {
             throw new InvalidUlidException();
         }
 
-        return downloadService.getEmitter(requestId); // Subscribe to SSE events for this request
+        return sseService.getEmitter(requestId); // Subscribe to SSE events for this request
     }
 
     @GetMapping("/{requestId}")

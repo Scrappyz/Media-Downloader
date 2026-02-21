@@ -1,15 +1,12 @@
 package com.scrappyz.ytdlp.download.domain.service.helper;
 
-import java.io.IOException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.config.properties.DownloadProperties;
-import com.scrappyz.ytdlp.download.api.dto.DownloadProgressResponse;
+import com.scrappyz.ytdlp.download.domain.service.DownloadSseService;
 import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService;
 import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService.ErrorCode;
 
@@ -21,12 +18,14 @@ import lombok.RequiredArgsConstructor;
 public class DownloadProgressHelper {
     
     private static final Logger log = LoggerFactory.getLogger(YtdlpDownloadService.class);
+    private final DownloadSseService sseService;
+
     private float lastProgressPercentage = 0;
     private final DownloadProperties downloadProperties;
     private int downloadsDone = 0;
     private boolean isMergeProcess = false; // Flag to indicate if the process involves a merge (e.g. "bestvideo+bestaudio")
 
-    public ErrorCode processLine(String line, SseEmitter emitter) {
+    public ErrorCode processLine(String line, String id) {
         // log.info("[DownloadProgressHelper.processLine] Output: " + line);
 
         if(line.startsWith("[youtube:tab]") && line.contains("Downloading playlist")) {
@@ -79,17 +78,7 @@ public class DownloadProgressHelper {
             }
         }
 
-        DownloadProgressResponse progressResponse = new DownloadProgressResponse(progress, message);
-        try {
-            emitter.send(SseEmitter.event()
-                .name("progress")
-                .data(progressResponse)
-            );
-        } catch(IOException e) {
-            log.info("[DownloadHelper.processLine] Failed to send progress update via SseEmitter");
-        } catch(IllegalStateException e) {
-            log.info("[DownloadHelper.processLine] Emitter has already completed");
-        }
+        sseService.setProgress(id, progress, "ongoing", message);
 
         return ErrorCode.NONE;
         

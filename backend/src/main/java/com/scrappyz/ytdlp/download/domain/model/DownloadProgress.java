@@ -10,10 +10,12 @@ public class DownloadProgress {
     
     private float percentage;
     private String status;
+    private String message;
 
-    public DownloadProgress(float percentage, String status) {
+    public DownloadProgress(float percentage, String status, String message) {
         this.percentage = percentage;
         this.status = status;
+        this.message = message;
     }
 
 }

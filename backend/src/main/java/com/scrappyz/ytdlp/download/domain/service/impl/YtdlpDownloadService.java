@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
@@ -37,13 +36,13 @@ import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedExcepti
 import com.scrappyz.ytdlp.download.domain.exception.custom.ExpiredResourceException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FailedProcessException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FormatUnavailableException;
-import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidProcessException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.UnsupportedUrlException;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpProcessResult;
 import com.scrappyz.ytdlp.download.domain.service.DownloadRepositoryService;
 import com.scrappyz.ytdlp.download.domain.service.DownloadService;
+import com.scrappyz.ytdlp.download.domain.service.DownloadSseService;
 import com.scrappyz.ytdlp.download.domain.service.helper.DownloadProgressHelper;
 import com.scrappyz.ytdlp.download.domain.service.helper.DownloadResourceHelper;
 import com.scrappyz.ytdlp.download.domain.service.helper.YtdlpDownloadProcessHandler;
@@ -76,6 +75,7 @@ public class YtdlpDownloadService implements DownloadService {
     private final ResourceRepository resourceRepository;
 
     private final DownloadRepositoryService downloadRepositoryService;
+    private final DownloadSseService sseService;
 
     private final DownloadResourceHelper resourceHelper;
     private final YtdlpDownloadProcessHandler downloadProcessHandler;
@@ -96,8 +96,6 @@ public class YtdlpDownloadService implements DownloadService {
     private static final HashSet<String> audioFormat = new HashSet<>(
         Arrays.asList("flac", "m4a", "mp3")
     );
-
-    private final ConcurrentHashMap<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     public enum Site {
         YOUTUBE("youtube"),
@@ -232,7 +230,7 @@ public class YtdlpDownloadService implements DownloadService {
         }
 
         if(!status.equals("completed") && !status.equals("ongoing")) { // If the request is not already completed or ongoing, start the download process
-            addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
+            sseService.addEmitter(id, new SseEmitter(downloadProperties.getTimeout().toMillis()));
             downloadExecutor.submit(() -> download(id, request));
         }
 
@@ -265,15 +263,6 @@ public class YtdlpDownloadService implements DownloadService {
     }
 
     @Override
-    public SseEmitter getEmitter(String id) throws InvalidProcessException {
-        if(!emitters.containsKey(id)) {
-            throw new InvalidProcessException("Emitter with request ID " + id + " could not be found");
-        }
-
-        return emitters.get(id);
-    }
-
-    @Override
     public FileSystemResource getResource(String id) throws ResourceNotFoundException {
         Resource r = resourceRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Resource not found with request ID: " + id));
         
@@ -291,12 +280,12 @@ public class YtdlpDownloadService implements DownloadService {
         throws InvalidUrlException, UnsupportedUrlException, FormatUnavailableException, DownloadFailedException, FailedProcessException {
 
         DownloadResult result = new DownloadResult("pending", "Download is pending");
-        SseEmitter emitter = emitters.get(id);
+        SseEmitter emitter = sseService.getEmitter(id);
 
         // Run when the download is complete
         emitter.onCompletion(() -> {
             log.info("[YtdlpDownloadService.download] SseEmitter with ID " + id + " has completed");
-            emitters.remove(id);
+            sseService.removeEmitter(id);
         });
 
         try {
@@ -366,9 +355,8 @@ public class YtdlpDownloadService implements DownloadService {
             processResult = downloadProcessHandler.runProcess(
                 commands,
                 id,
-                emitter,
-                (line, em) -> {
-                    return progressHelper.processLine(line, em); // Or handle the output line as needed
+                (line, requestId) -> {
+                    return progressHelper.processLine(line, requestId); // Or handle the output line as needed
                 },
                 (line) -> {
                     return parseError(line); // Or handle the error line as needed
@@ -751,19 +739,5 @@ public class YtdlpDownloadService implements DownloadService {
 
     }
     // ---HELPER METHODS---
-
-    public void addEmitter(String id, SseEmitter emitter) {
-        emitters.put(id, emitter);
-    }
-
-    public void removeEmitter(String id, Exception e) {
-        emitters.get(id).completeWithError(e);
-        emitters.remove(id);
-    }
-
-    public void removeEmitter(String id) {
-        emitters.get(id).complete();
-        emitters.remove(id);
-    }
 
 }
