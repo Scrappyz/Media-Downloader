@@ -51,18 +51,14 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
             downloadProcess.setRunning(true);
 
             downloadProcess.getExecutorService().execute(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                try(BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         DownloadErrorCode error = DownloadErrorCode.NONE; // Placeholder for error handling logic
                         boolean readable = processes.get(id).isReadable();
 
-                        try {
-                            error = processLineHandler.handle(line, id);
-                            if(readable) processResult.setError(error);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
+                        error = processLineHandler.handle(line, id);
+                        if(readable) processResult.setError(error);
 
                         if(processResult.getError() != DownloadErrorCode.NONE) {
                             processes.get(id).setReadable(false);
@@ -75,7 +71,9 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                             sseService.sendProgress(id, progress.getPercentage(), progress.getMessage());
                         }
                     }
-                } catch (IOException e) {
+                } catch(IOException e) {
+                    e.printStackTrace();
+                } catch(Exception e) {
                     e.printStackTrace();
                 }
             });

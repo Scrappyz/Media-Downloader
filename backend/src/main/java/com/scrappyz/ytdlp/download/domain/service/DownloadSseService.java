@@ -206,4 +206,8 @@ public class DownloadSseService {
             log.info("[DownloadSseService.sendStatus] Failed to send due to IOException");
         }
     }
+
+    public int getTotalEmitters() {
+        return emitters.size();
+    }
 }

@@ -200,13 +200,16 @@ public class YtdlpDownloadService implements DownloadService {
             downloadRepositoryService.addNewRequest(req);
         }
 
-        if(!status.equals("completed") && !status.equals("ongoing")) { // If the request is not already completed or ongoing, start the download process
+        if(status.equals("ongoing")) {
+            sseService.addEmitter(id, downloadProperties.getTimeout().toMillis());
+        } else if(!status.equals("completed")) { // If the request is not already completed or ongoing, start the download process
             sseService.addEmitter(id, downloadProperties.getTimeout().toMillis());
             downloadExecutor.submit(() -> download(id, request));
         }
 
         result.setRequestId(id);
         result.setStatus(status);
+        log.info("[YtdlpDownloadService.enqueue] Total Emitters: " + sseService.getTotalEmitters());
 
         return result;
     }
@@ -341,6 +344,7 @@ public class YtdlpDownloadService implements DownloadService {
             downloadRepositoryService.updateRequestStatusById(id, "cancelled");
 
             sseService.completeEmitter(id);
+            sseService.removeEmitter(id);
             resourceHelper.removeResource(id); // Remove any partially downloaded resources
             return;
         }
@@ -353,7 +357,12 @@ public class YtdlpDownloadService implements DownloadService {
         DownloadErrorCode error = processResult.getError();
 
         if(error != DownloadErrorCode.NONE) {
-            sseService.sendError(id, error);
+            try {
+                sseService.sendError(id, error);   
+            } finally {
+                sseService.completeEmitter(id);
+                sseService.removeEmitter(id);
+            }
             return;
         }
 
@@ -382,6 +391,7 @@ public class YtdlpDownloadService implements DownloadService {
 
         sseService.sendStatus(id, result.getStatus(), result.getMessage());
         sseService.completeEmitter(id);
+        sseService.removeEmitter(id);
     }
 
     // ---HELPER METHODS---
