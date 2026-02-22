@@ -1,5 +1,6 @@
 package com.scrappyz.ytdlp.download.domain.model;
 
+import java.time.Instant;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
@@ -16,7 +17,13 @@ public class ExpiringResource implements Delayed {
 
     public ExpiringResource(String id, long expiryMillis, long fileSize) {
         this.id = id;
-        this.expiryMillis = System.currentTimeMillis() + expiryMillis;
+        this.expiryMillis = expiryMillis;
+        this.fileSize = fileSize;
+    }
+
+    public ExpiringResource(String id, Instant expireAt, long fileSize) {
+        this.id = id;
+        this.expiryMillis = expireAt.toEpochMilli();
         this.fileSize = fileSize;
     }
 

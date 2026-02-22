@@ -372,22 +372,26 @@ public class YtdlpDownloadService implements DownloadService {
         result.setStatus("completed");
         result.setMessage("Download has finished");
 
-        resourceHelper.queue(id); // Cleanup resources in set time
-
         log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
+
+        Instant createdAt = Instant.now();
+        Instant expireAt = createdAt.plus(resourceHelper.getResourceExpiryTime());
+        long storageUsed = resourceHelper.getFileSize(id);
 
         // Set request to 'completed' in database and add resource details
         try {
             downloadRepositoryService.completeRequestById(id);
             downloadRepositoryService.addNewResource(
                 id, 
-                java.time.Instant.now(),
-                java.time.Instant.now().plus(resourceHelper.getResourceExpiryTime()), 
-                resourceHelper.getFileSize(id)
+                createdAt,
+                expireAt, 
+                storageUsed
             );
         } catch(Exception e) {
             e.printStackTrace();
         }
+
+        resourceHelper.queue(id, expireAt, storageUsed);
 
         sseService.sendStatus(id, result.getStatus(), result.getMessage());
         sseService.completeEmitter(id);

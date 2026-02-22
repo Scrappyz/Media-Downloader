@@ -55,10 +55,10 @@ public class DownloadRepositoryService {
     }
 
     @Transactional
-    public void deleteResourceByRequestId(String requestId) {
+    public void updateDeletedAtForResource(String requestId) {
         Resource resource = resourceRepository.findById(requestId)
             .orElseThrow(() -> new IllegalArgumentException("Resource not found with request ID: " + requestId));
-        resourceRepository.delete(resource);
+        resource.setDeletedAt(Instant.now());
     }
 
     @Transactional

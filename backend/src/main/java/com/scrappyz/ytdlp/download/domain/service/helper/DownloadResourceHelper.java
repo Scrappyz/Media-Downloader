@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.DelayQueue;
 
 import org.apache.commons.io.FileUtils;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import com.scrappyz.ytdlp.config.properties.PathProperties;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.download.domain.model.ExpiringResource;
+import com.scrappyz.ytdlp.download.domain.service.DownloadRepositoryService;
+import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +29,10 @@ public class DownloadResourceHelper {
     private static final Logger log = LoggerFactory.getLogger(DownloadResourceHelper.class);
 
     private final PathProperties paths;
+
+    private final ResourceRepository resourceRepository;
+
+    private final DownloadRepositoryService downloadRepositoryService;
 
     @Value("${resource.expiry.time}")
     private Duration resourceExpiryTime;
@@ -50,6 +57,8 @@ public class DownloadResourceHelper {
 
                 log.info("[DownloadResourceHelper.run] '" + id + "' has expired");
                 FileUtils.deleteDirectory(new File(resourcePath.toString()));
+
+                downloadRepositoryService.updateDeletedAtForResource(id);
             
                 occupiedStorage -= fileSize;
                 log.info("[DownloadResourceHelper.run] Occupied Storage: " + occupiedStorage);
@@ -62,15 +71,13 @@ public class DownloadResourceHelper {
     }
 
     // Add an item in the queue for expiry
-    public void queue(String id) {
+    public void queue(String id, Instant expireAt, long storageUsed) {
         long expiryMillis = resourceExpiryTime.toMillis();
         log.info("[DownloadResourceHelper.queue] '" + id + "' has been queued for expiry in " + expiryMillis + " ms");
 
-        long fileSize = getFileSize(id);
+        queue.put(new ExpiringResource(id, expireAt, storageUsed));
 
-        queue.put(new ExpiringResource(id, expiryMillis, fileSize));
-
-        occupiedStorage += fileSize;
+        occupiedStorage += storageUsed;
         log.info("[DownloadResourceHelper.queue] Occupied Storage: " + occupiedStorage);
     }
 

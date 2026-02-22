@@ -1,14 +1,10 @@
 package com.scrappyz.ytdlp.startup;
 
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -17,7 +13,10 @@ import org.springframework.stereotype.Component;
 
 import com.scrappyz.ytdlp.config.properties.PathProperties;
 import com.scrappyz.ytdlp.config.properties.YtdlpProperties;
+import com.scrappyz.ytdlp.download.domain.service.DownloadRepositoryService;
 import com.scrappyz.ytdlp.download.domain.service.helper.DownloadResourceHelper;
+import com.scrappyz.ytdlp.download.infrastructure.entity.Resource;
+import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -33,25 +32,27 @@ public class YtdlpStartupListener implements ApplicationListener<ApplicationRead
     private final PathProperties paths;
     private final DownloadResourceHelper resourceHelper;
     private final ExecutorService startupExecutor;
+    private final ResourceRepository resourceRepository;
+    private final DownloadRepositoryService downloadRepositoryService;
 
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
         boolean isEmpty = false;
 
-        try(DirectoryStream<Path> dirStream = Files.newDirectoryStream(paths.getDownloadPath())) {
-            isEmpty = !dirStream.iterator().hasNext();
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
+        // try(DirectoryStream<Path> dirStream = Files.newDirectoryStream(paths.getDownloadPath())) {
+        //     isEmpty = !dirStream.iterator().hasNext();
+        // } catch(IOException e) {
+        //     e.printStackTrace();
+        // }
 
-        if(!isEmpty) {
-            log.info("[YtdlpStartupListener.onApplicationEvent] Emptying download directory contents on startup");
-            try {
-                FileUtils.cleanDirectory(paths.getDownloadPath().toFile());
-            } catch(IOException e) {
-                e.printStackTrace();
-            }
-        }
+        // if(!isEmpty) {
+        //     log.info("[YtdlpStartupListener.onApplicationEvent] Emptying download directory contents on startup");
+        //     try {
+        //         FileUtils.cleanDirectory(paths.getDownloadPath().toFile());
+        //     } catch(IOException e) {
+        //         e.printStackTrace();
+        //     }
+        // }
 
         if(ytdlpProperties.isAutoUpdate()) {
             startupExecutor.execute(() -> {
@@ -70,6 +71,14 @@ public class YtdlpStartupListener implements ApplicationListener<ApplicationRead
             });
 
             log.info("[YtdlpStartupListener.onApplicationEvent] Updating yt-dlp");
+        }
+
+        List<Resource> deleteResources = resourceRepository.findAllNonDeletedExpiredResources();
+        for(int i = 0; i < deleteResources.size(); i++) {
+            String id = deleteResources.get(i).getRequestId();
+            log.info("[YtdlpStartupListener.onApplicationEvent] Removing resource: " + id);
+            resourceHelper.removeResource(id);
+            downloadRepositoryService.updateDeletedAtForResource(id);
         }
 
         startupExecutor.execute(() -> resourceHelper.run()); // Expire resources

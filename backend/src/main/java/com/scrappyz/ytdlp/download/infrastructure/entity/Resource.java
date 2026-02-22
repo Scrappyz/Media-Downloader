@@ -36,6 +36,9 @@ public class Resource {
     @Column(name = "fetch_count", nullable = false)
     private int fetchCount;
 
+    @Column(name = "deleted_at", nullable = true)
+    private Instant deletedAt;
+
     @Version
     @Column(name = "version")
     private Long version;
