@@ -17,6 +17,7 @@ import com.scrappyz.ytdlp.download.api.dto.DownloadProgressResponse;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.model.DownloadProgress;
+import com.scrappyz.ytdlp.download.domain.model.SseStatus;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpDownloadProcess;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpProcessResult;
 import com.scrappyz.ytdlp.download.domain.service.DownloadSseService;
@@ -69,17 +70,9 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                             continue;
                         }
 
-                        DownloadProgress progress = sseService.getProgress(id);
-                        DownloadProgressResponse progressResponse = new DownloadProgressResponse(progress.getPercentage(), progress.getMessage());
-                        try {
-                            emitter.send(SseEmitter.event()
-                                .name("progress")
-                                .data(progressResponse)
-                            );
-                        } catch(IOException e) {
-                            log.info("[YtdlpProcessResult.processLine] Failed to send progress update via SseEmitter");
-                        } catch(IllegalStateException e) {
-                            log.info("[YtdlpProcessResult.processLine] Emitter has already completed");
+                        if(sseService.getEmitterStatus(id) == SseStatus.ACTIVE) {
+                            DownloadProgress progress = sseService.getProgress(id);
+                            sseService.sendProgress(id, progress.getPercentage(), progress.getMessage());
                         }
                     }
                 } catch (IOException e) {

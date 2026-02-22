@@ -6,8 +6,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.scrappyz.ytdlp.download.api.dto.ApiError;
 import com.scrappyz.ytdlp.download.api.dto.DownloadProgressResponse;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResult;
+import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
+import com.scrappyz.ytdlp.download.domain.exception.custom.FailedProcessException;
+import com.scrappyz.ytdlp.download.domain.exception.custom.FormatUnavailableException;
+import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUrlException;
+import com.scrappyz.ytdlp.download.domain.exception.custom.UnsupportedUrlException;
+import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.model.DownloadProgress;
 import com.scrappyz.ytdlp.download.domain.model.SseStatus;
 
@@ -30,10 +37,12 @@ public class DownloadSseService {
         progressMap.put(id, new DownloadProgress(0, "pending", null));
 
         emitter.onCompletion(() -> {
-            if(statusMap.get(id) != SseStatus.ERROR && statusMap.get(id) != SseStatus.TIMEOUT) {
-                log.info("[DownloadSseService.addEmitter] SseEmitter with ID '" + id + "' has completed successfully");
-                statusMap.put(id, SseStatus.COMPLETED);
+            if(statusMap.get(id) != SseStatus.ACTIVE) {
+                return;
             }
+
+            log.info("[DownloadSseService.addEmitter] SseEmitter with ID '" + id + "' has completed successfully");
+            statusMap.put(id, SseStatus.COMPLETED);
         });
 
         emitter.onError(throwable -> {
@@ -136,36 +145,65 @@ public class DownloadSseService {
                 .data(result)
             );
         } catch(IOException ex) {
-            log.info("[DownloadSseService.sendStatus] Failed to send download cancelled status via SseEmitter");
+            log.info("[DownloadSseService.sendStatus] Failed to send due to IOException");
         }
     }
 
-    public void sendError(String id, ) {
-        SseEmitter emitter = emitters.get(id);
-        DownloadResult result = new DownloadResult(status, message);
+    public void sendError(String id, DownloadErrorCode error) 
+        throws InvalidUrlException, UnsupportedUrlException, FormatUnavailableException, DownloadFailedException, FailedProcessException {
         
-        if(statusMap.get(id) == SseStatus.ERROR) {
-            log.info("[DownloadSseService.sendStatus] SseEmitter with ID '" + id + "' could not send because it has already completed with an error");
-            return;
-        }
-
-        if(statusMap.get(id) == SseStatus.TIMEOUT) {
-            log.info("[DownloadSseService.sendStatus] SseEmitter with ID '" + id + "' could not send because it has reached timeout");
-            return;
-        }
-
-        if(statusMap.get(id) == SseStatus.COMPLETED) {
-            log.info("[DownloadSseService.sendStatus] SseEmitter with ID '" + id + "' could not send because it has already completed");
-            return;
-        }
-
+        SseEmitter emitter = emitters.get(id);
         try {
-            emitter.send(SseEmitter.event()
-                .name("status")
-                .data(result)
-            );
-        } catch(IOException ex) {
-            log.info("[DownloadSseService.sendStatus] Failed to send download cancelled status via SseEmitter");
+            if(error == DownloadErrorCode.INVALID_URL) {
+                log.info("[DownloadSseService.sendError] Invalid URL");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(DownloadErrorCode.INVALID_URL.getString(), "The URL provided is not valid"))
+                );
+                throw new InvalidUrlException();
+            }
+
+            if(error == DownloadErrorCode.UNSUPPORTED_URL) {
+                log.info("[DownloadSseService.sendError] Unsupported URL");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(DownloadErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is not supported"))
+                );
+
+                throw new UnsupportedUrlException();
+            }
+
+            if(error == DownloadErrorCode.FORMAT_UNAVAILABLE) {
+                log.info("[DownloadSseService.sendError] Format unavailable");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(DownloadErrorCode.FORMAT_UNAVAILABLE.getString(), "The format requested is unavailable"))
+                );
+
+                throw new FormatUnavailableException();
+            }
+
+            if(error == DownloadErrorCode.POSTPROCESSING_ERROR) {
+                log.info("[DownloadSseService.sendError] Postprocessing error");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(DownloadErrorCode.POSTPROCESSING_ERROR.getString(), "There was a problem in postprocessing"))
+                );
+
+                throw new DownloadFailedException();
+            }
+
+            if(error == DownloadErrorCode.FAILED_UNEXPECTEDLY) {
+                log.info("[DownloadSseService.sendError] Download has failed unexpectedly");
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(new ApiError(DownloadErrorCode.FAILED_UNEXPECTEDLY.getString(), "Download has failed unexpectedly"))
+                );
+
+                throw new DownloadFailedException();
+            }
+        } catch(IOException e) {
+            log.info("[DownloadSseService.sendStatus] Failed to send due to IOException");
         }
     }
 }

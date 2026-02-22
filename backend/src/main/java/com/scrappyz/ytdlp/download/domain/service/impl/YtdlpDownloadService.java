@@ -322,6 +322,7 @@ public class YtdlpDownloadService implements DownloadService {
         } catch(DownloadFailedException e) { // If something goes wrong with the download process
             log.info("[YtdlpDownloadService.download] Remove process with ID " + id + " because of error");
             downloadProcessHandler.removeProcessById(id);
+            sseService.completeEmitter(id);
             sseService.removeEmitter(id);
             downloadRepositoryService.updateRequestStatusById(id, "failed");
             throw new DownloadFailedException();
@@ -350,50 +351,10 @@ public class YtdlpDownloadService implements DownloadService {
 
         // Handle errors
         DownloadErrorCode error = processResult.getError();
-        // sendSseError(error, emitter);
-
-        if(error == DownloadErrorCode.INVALID_URL) {
-            log.info("[YtdlpDownloadService.sendSseError] Invalid URL");
-            emitter.send(SseEmitter.event()
-                .name("error")
-                .data(new ApiError(DownloadErrorCode.INVALID_URL.getString(), "The URL provided is not valid"))
-            );
-        }
-
-        if(error == DownloadErrorCode.UNSUPPORTED_URL) {
-            log.info("[YtdlpDownloadService.sendSseError] Unsupported URL");
-            emitter.send(SseEmitter.event()
-                .name("error")
-                .data(new ApiError(DownloadErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is not supported"))
-            );
-        }
-
-        if(error == DownloadErrorCode.FORMAT_UNAVAILABLE) {
-            log.info("[YtdlpDownloadService.sendSseError] Format unavailable");
-            emitter.send(SseEmitter.event()
-                .name("error")
-                .data(new ApiError(DownloadErrorCode.FORMAT_UNAVAILABLE.getString(), "The format requested is unavailable"))
-            );
-        }
-
-        if(error == DownloadErrorCode.POSTPROCESSING_ERROR) {
-            log.info("[YtdlpDownloadService.sendSseError] Postprocessing error");
-            emitter.send(SseEmitter.event()
-                .name("error")
-                .data(new ApiError(DownloadErrorCode.POSTPROCESSING_ERROR.getString(), "There was a problem in postprocessing"))
-            );
-        }
-
-        if(error == DownloadErrorCode.FAILED_UNEXPECTEDLY) {
-            log.info("[YtdlpDownloadService.sendSseError] Download has failed unexpectedly");
-            emitter.send(SseEmitter.event()
-                .name("error")
-                .data(new ApiError(DownloadErrorCode.FAILED_UNEXPECTEDLY.getString(), "Download has failed unexpectedly"))
-            );
-        }
 
         if(error != DownloadErrorCode.NONE) {
-            emitter.complete();
+            sseService.sendError(id, error);
+            return;
         }
 
         // ========DOWNLOAD COMPLETED SUCCESSFULLY========
@@ -419,19 +380,8 @@ public class YtdlpDownloadService implements DownloadService {
             e.printStackTrace();
         }
 
-        try { 
-            emitter.send(SseEmitter.event() // Send final result
-                .name("status")
-                .data(result)
-            );
-        } catch(IOException e) {
-            log.info("[YtdlpDownloadService.download] Failed to send initial pending status via SseEmitter");
-        } catch(IllegalStateException e) {
-            log.info("[YtdlpDownloadService.download] Emitter has already completed");
-            return;
-        }
-
-        emitter.complete();
+        sseService.sendStatus(id, result.getStatus(), result.getMessage());
+        sseService.completeEmitter(id);
     }
 
     // ---HELPER METHODS---
