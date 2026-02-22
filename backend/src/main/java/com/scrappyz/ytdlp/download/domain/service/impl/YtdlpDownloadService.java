@@ -14,8 +14,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
@@ -54,13 +52,13 @@ import com.scrappyz.ytdlp.download.infrastructure.repository.RequestRepository;
 import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service("ytdlp")
 @Primary
+@Slf4j
 @RequiredArgsConstructor
 public class YtdlpDownloadService implements DownloadService {
-
-    private static final Logger log = LoggerFactory.getLogger(YtdlpDownloadService.class);
 
     private final ObjectProvider<DownloadProgressHelper> progressHelperProvider;
     
@@ -365,6 +363,7 @@ public class YtdlpDownloadService implements DownloadService {
         } catch(DownloadFailedException e) { // If something goes wrong with the download process
             log.info("[YtdlpDownloadService.download] Remove process with ID " + id + " because of error");
             downloadProcessHandler.removeProcessById(id);
+            sseService.removeEmitter(id);
             downloadRepositoryService.updateRequestStatusById(id, "failed");
             throw new DownloadFailedException();
         }
@@ -374,16 +373,7 @@ public class YtdlpDownloadService implements DownloadService {
             result.setStatus("cancelled");
             result.setMessage("Download was cancelled");
 
-            try {
-                emitter.send(SseEmitter.event()
-                    .name("status")
-                    .data(result)
-                );
-            } catch(IOException ex) {
-                log.info("[YtdlpDownloadService.download] Failed to send download cancelled status via SseEmitter");
-            } catch(IllegalStateException ex) {
-                log.info("[YtdlpDownloadService.download] Emitter has already completed");
-            }
+            sseService.sendStatus(id, result.getStatus(), result.getMessage());
 
             downloadProcessHandler.removeProcessById(id);
 
