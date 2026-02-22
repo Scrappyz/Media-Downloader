@@ -37,6 +37,7 @@ import com.scrappyz.ytdlp.download.domain.exception.custom.FormatUnavailableExce
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.UnsupportedUrlException;
+import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpProcessResult;
 import com.scrappyz.ytdlp.download.domain.service.DownloadRepositoryService;
 import com.scrappyz.ytdlp.download.domain.service.DownloadService;
@@ -123,35 +124,7 @@ public class YtdlpDownloadService implements DownloadService {
         }
     }
 
-    public enum ErrorCode {
-        NONE("none"),
-        UNSUPPORTED_URL("unsupported_url"),
-        INVALID_URL("invalid_url"),
-        FORMAT_UNAVAILABLE("format_unavailable"),
-        POSTPROCESSING_ERROR("postprocessing_error"),
-        FAILED_UNEXPECTEDLY("failed_unexpectedly");
-
-        private final String string;
-        private static final HashMap<String, ErrorCode> byString = new HashMap<>();
-
-        static {
-            for(ErrorCode t: values()) {
-                byString.put(t.string, t);
-            }
-        }
-
-        private ErrorCode(String string) {
-            this.string = string;
-        }
-
-        public String getString() {
-            return string;
-        }
-
-        public static ErrorCode getErrorCode(String str) {
-            return byString.get(str);
-        }
-    };
+    
 
     private Request createRequestEntity(String id, String status, DownloadRequest request) {
         Request req = new Request();
@@ -278,22 +251,8 @@ public class YtdlpDownloadService implements DownloadService {
         throws InvalidUrlException, UnsupportedUrlException, FormatUnavailableException, DownloadFailedException, FailedProcessException {
 
         DownloadResult result = new DownloadResult("pending", "Download is pending");
-        SseEmitter emitter = sseService.getEmitter(id);
 
-        // Run when the download is complete
-        emitter.onCompletion(() -> {
-            log.info("[YtdlpDownloadService.download] SseEmitter with ID " + id + " has completed");
-            sseService.removeEmitter(id);
-        });
-
-        try {
-            emitter.send(SseEmitter.event()
-                .name("status")
-                .data(result)
-            );
-        } catch(IOException e) {
-            log.info("[YtdlpDownloadService.download] Failed to send initial pending status via SseEmitter");
-        }
+        sseService.sendStatus(id, result.getStatus(), result.getMessage());
 
         String url = request.getUrl();
         String type = request.getRequestType();
@@ -380,7 +339,7 @@ public class YtdlpDownloadService implements DownloadService {
             // Set request to 'cancelled' in database
             downloadRepositoryService.updateRequestStatusById(id, "cancelled");
 
-            emitter.complete();
+            sseService.completeEmitter(id);
             resourceHelper.removeResource(id); // Remove any partially downloaded resources
             return;
         }
@@ -390,8 +349,52 @@ public class YtdlpDownloadService implements DownloadService {
         // ========PROCESS COMPLETED SUCCESSFULLY========
 
         // Handle errors
-        ErrorCode error = processResult.getError();
-        sendSseError(error, emitter);
+        DownloadErrorCode error = processResult.getError();
+        // sendSseError(error, emitter);
+
+        if(error == DownloadErrorCode.INVALID_URL) {
+            log.info("[YtdlpDownloadService.sendSseError] Invalid URL");
+            emitter.send(SseEmitter.event()
+                .name("error")
+                .data(new ApiError(DownloadErrorCode.INVALID_URL.getString(), "The URL provided is not valid"))
+            );
+        }
+
+        if(error == DownloadErrorCode.UNSUPPORTED_URL) {
+            log.info("[YtdlpDownloadService.sendSseError] Unsupported URL");
+            emitter.send(SseEmitter.event()
+                .name("error")
+                .data(new ApiError(DownloadErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is not supported"))
+            );
+        }
+
+        if(error == DownloadErrorCode.FORMAT_UNAVAILABLE) {
+            log.info("[YtdlpDownloadService.sendSseError] Format unavailable");
+            emitter.send(SseEmitter.event()
+                .name("error")
+                .data(new ApiError(DownloadErrorCode.FORMAT_UNAVAILABLE.getString(), "The format requested is unavailable"))
+            );
+        }
+
+        if(error == DownloadErrorCode.POSTPROCESSING_ERROR) {
+            log.info("[YtdlpDownloadService.sendSseError] Postprocessing error");
+            emitter.send(SseEmitter.event()
+                .name("error")
+                .data(new ApiError(DownloadErrorCode.POSTPROCESSING_ERROR.getString(), "There was a problem in postprocessing"))
+            );
+        }
+
+        if(error == DownloadErrorCode.FAILED_UNEXPECTEDLY) {
+            log.info("[YtdlpDownloadService.sendSseError] Download has failed unexpectedly");
+            emitter.send(SseEmitter.event()
+                .name("error")
+                .data(new ApiError(DownloadErrorCode.FAILED_UNEXPECTEDLY.getString(), "Download has failed unexpectedly"))
+            );
+        }
+
+        if(error != DownloadErrorCode.NONE) {
+            emitter.complete();
+        }
 
         // ========DOWNLOAD COMPLETED SUCCESSFULLY========
         log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
@@ -626,34 +629,34 @@ public class YtdlpDownloadService implements DownloadService {
         return finalFormat;
     }
 
-    private ErrorCode parseError(String error) {
+    private DownloadErrorCode parseError(String error) {
         log.info("[YtdlpDownloadService.parseError] " + error);
 
         if(!error.startsWith("ERROR:")) {
-            return ErrorCode.NONE;
+            return DownloadErrorCode.NONE;
         }
 
         if(error.contains("Unsupported URL")) {
-            return ErrorCode.UNSUPPORTED_URL;
+            return DownloadErrorCode.UNSUPPORTED_URL;
         }
 
         if(error.contains("not a valid URL")) {
-            return ErrorCode.INVALID_URL;
+            return DownloadErrorCode.INVALID_URL;
         }
 
         if(error.contains("Requested format is not available")) {
-            return ErrorCode.FORMAT_UNAVAILABLE;
+            return DownloadErrorCode.FORMAT_UNAVAILABLE;
         }
 
         if(error.contains("Supported filetypes for thumbnail embedding")) {
-            return ErrorCode.POSTPROCESSING_ERROR;
+            return DownloadErrorCode.POSTPROCESSING_ERROR;
         }
 
         if(error.contains("[generic]")) {
-            return ErrorCode.FAILED_UNEXPECTEDLY;
+            return DownloadErrorCode.FAILED_UNEXPECTEDLY;
         }
 
-        return ErrorCode.NONE;
+        return DownloadErrorCode.NONE;
     }
 
     private Site parseSite(String url) {
@@ -673,50 +676,50 @@ public class YtdlpDownloadService implements DownloadService {
         return Site.UNKNOWN;
     }
 
-    private void sendSseError(ErrorCode error, SseEmitter emitter) {
+    private void sendSseError(DownloadErrorCode error, SseEmitter emitter) {
         log.info("[YtdlpDownloadService.sendSseError] " + error);
         try {
-            if(error == ErrorCode.INVALID_URL) {
+            if(error == DownloadErrorCode.INVALID_URL) {
                 log.info("[YtdlpDownloadService.sendSseError] Invalid URL");
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data(new ApiError(ErrorCode.INVALID_URL.getString(), "The URL provided is not valid"))
+                    .data(new ApiError(DownloadErrorCode.INVALID_URL.getString(), "The URL provided is not valid"))
                 );
             }
 
-            if(error == ErrorCode.UNSUPPORTED_URL) {
+            if(error == DownloadErrorCode.UNSUPPORTED_URL) {
                 log.info("[YtdlpDownloadService.sendSseError] Unsupported URL");
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data(new ApiError(ErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is not supported"))
+                    .data(new ApiError(DownloadErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is not supported"))
                 );
             }
 
-            if(error == ErrorCode.FORMAT_UNAVAILABLE) {
+            if(error == DownloadErrorCode.FORMAT_UNAVAILABLE) {
                 log.info("[YtdlpDownloadService.sendSseError] Format unavailable");
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data(new ApiError(ErrorCode.FORMAT_UNAVAILABLE.getString(), "The format requested is unavailable"))
+                    .data(new ApiError(DownloadErrorCode.FORMAT_UNAVAILABLE.getString(), "The format requested is unavailable"))
                 );
             }
 
-            if(error == ErrorCode.POSTPROCESSING_ERROR) {
+            if(error == DownloadErrorCode.POSTPROCESSING_ERROR) {
                 log.info("[YtdlpDownloadService.sendSseError] Postprocessing error");
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data(new ApiError(ErrorCode.POSTPROCESSING_ERROR.getString(), "There was a problem in postprocessing"))
+                    .data(new ApiError(DownloadErrorCode.POSTPROCESSING_ERROR.getString(), "There was a problem in postprocessing"))
                 );
             }
 
-            if(error == ErrorCode.FAILED_UNEXPECTEDLY) {
+            if(error == DownloadErrorCode.FAILED_UNEXPECTEDLY) {
                 log.info("[YtdlpDownloadService.sendSseError] Download has failed unexpectedly");
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data(new ApiError(ErrorCode.FAILED_UNEXPECTEDLY.getString(), "Download has failed unexpectedly"))
+                    .data(new ApiError(DownloadErrorCode.FAILED_UNEXPECTEDLY.getString(), "Download has failed unexpectedly"))
                 );
             }
 
-            if(error != ErrorCode.NONE) {
+            if(error != DownloadErrorCode.NONE) {
                 emitter.complete();
             }
 

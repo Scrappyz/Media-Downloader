@@ -15,11 +15,11 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.scrappyz.ytdlp.download.api.dto.DownloadProgressResponse;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
+import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.model.DownloadProgress;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpDownloadProcess;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpProcessResult;
 import com.scrappyz.ytdlp.download.domain.service.DownloadSseService;
-import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -53,7 +53,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        ErrorCode error = ErrorCode.NONE; // Placeholder for error handling logic
+                        DownloadErrorCode error = DownloadErrorCode.NONE; // Placeholder for error handling logic
                         boolean readable = processes.get(id).isReadable();
 
                         try {
@@ -63,7 +63,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                             e.printStackTrace();
                         }
 
-                        if(processResult.getError() != ErrorCode.NONE) {
+                        if(processResult.getError() != DownloadErrorCode.NONE) {
                             processes.get(id).setReadable(false);
                             stopProcessById(id);
                             continue;
@@ -91,7 +91,7 @@ public class YtdlpDownloadProcessHandler implements DownloadProcessHandler<Ytdlp
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        ErrorCode error = ErrorCode.NONE;
+                        DownloadErrorCode error = DownloadErrorCode.NONE;
                         boolean readable = processes.get(id).isReadable();
                         try {
                             errorLineHandler.handle(line);

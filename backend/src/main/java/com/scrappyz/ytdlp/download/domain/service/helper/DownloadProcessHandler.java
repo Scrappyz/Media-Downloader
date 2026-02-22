@@ -3,7 +3,7 @@ package com.scrappyz.ytdlp.download.domain.service.helper;
 import java.util.List;
 
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
-import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService;
+import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
 
 public interface DownloadProcessHandler<T> {
 
@@ -14,11 +14,11 @@ public interface DownloadProcessHandler<T> {
 
     @FunctionalInterface
     interface ProcessLineHandler {
-        YtdlpDownloadService.ErrorCode handle(String line, String id) throws Exception;
+        DownloadErrorCode handle(String line, String id) throws Exception;
     }
 
     @FunctionalInterface
     interface ErrorLineHandler {
-        YtdlpDownloadService.ErrorCode handle(String line) throws Exception;
+        DownloadErrorCode handle(String line) throws Exception;
     }
 }

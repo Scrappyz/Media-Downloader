@@ -52,7 +52,6 @@ public class DownloadSseService {
     }
 
     public void removeEmitter(String id) {
-        emitters.get(id).complete();
         emitters.remove(id);
         progressMap.remove(id);
         statusMap.remove(id);
@@ -62,8 +61,16 @@ public class DownloadSseService {
         return emitters.get(id);
     }
 
+    public SseStatus getEmitterStatus(String id) {
+        return statusMap.get(id);
+    }
+
     public DownloadProgress getProgress(String id) {
         return progressMap.get(id);
+    }
+
+    public void completeEmitter(String id) {
+        emitters.get(id).complete();
     }
 
     public void setProgress(String id, float percentage, String status, String message) {
@@ -105,6 +112,35 @@ public class DownloadSseService {
     }
 
     public void sendStatus(String id, String status, String message) {
+        SseEmitter emitter = emitters.get(id);
+        DownloadResult result = new DownloadResult(status, message);
+        
+        if(statusMap.get(id) == SseStatus.ERROR) {
+            log.info("[DownloadSseService.sendStatus] SseEmitter with ID '" + id + "' could not send because it has already completed with an error");
+            return;
+        }
+
+        if(statusMap.get(id) == SseStatus.TIMEOUT) {
+            log.info("[DownloadSseService.sendStatus] SseEmitter with ID '" + id + "' could not send because it has reached timeout");
+            return;
+        }
+
+        if(statusMap.get(id) == SseStatus.COMPLETED) {
+            log.info("[DownloadSseService.sendStatus] SseEmitter with ID '" + id + "' could not send because it has already completed");
+            return;
+        }
+
+        try {
+            emitter.send(SseEmitter.event()
+                .name("status")
+                .data(result)
+            );
+        } catch(IOException ex) {
+            log.info("[DownloadSseService.sendStatus] Failed to send download cancelled status via SseEmitter");
+        }
+    }
+
+    public void sendError(String id, ) {
         SseEmitter emitter = emitters.get(id);
         DownloadResult result = new DownloadResult(status, message);
         
