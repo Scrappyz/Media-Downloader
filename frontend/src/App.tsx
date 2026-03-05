@@ -226,11 +226,11 @@ function App() {
         body: JSON.stringify(request)
       });
 
-      if(!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
-      }
+      const data: DownloadResponse | ApiError = await response.json();
 
-      const data: DownloadResponse = await response.json();
+      if(!response.ok) {
+        throw new Error(data.message);
+      }
 
       setRequestId(data.requestId);
       setDownloadStatus(data.status);
@@ -240,6 +240,7 @@ function App() {
     } catch(error: any) {
       console.error(error);
       setApiError(error.message);
+      setIsSubmitted(false);
       return error;
     }
   }
@@ -482,7 +483,7 @@ function App() {
           <Card.Section style={{overflowY: "auto"}}>
             <Flex direction="column" gap="sm">
               <Text size="sm">A <strong>full-stack web app</strong> for downloading videos or audio from <strong>multiple platforms</strong>. Built with <strong>React</strong> and <strong>Spring Boot</strong>, it features a mobile-first frontend and a multi-threaded backend to handle concurrent processing. The backend implements a <strong>REST API</strong> interface over <strong>yt-dlp</strong>, exposing its functionality via HTTP. The API is open-source and free to use.</Text>
-              <Text size="sm"><strong>Version:</strong> 1.1.0</Text>
+              <Text size="sm"><strong>Version:</strong> 1.1.1</Text>
               <Text size="sm"><strong>Built with:</strong> React + Spring Boot</Text>
               <Text size="sm"><strong>License:</strong> MIT</Text>
               <Text size="sm"><strong>GitHub:</strong> <a href="https://github.com/Scrappyz/Media-Downloader">View Repo</a></Text>

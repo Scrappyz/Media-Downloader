@@ -1,6 +1,7 @@
 package com.scrappyz.ytdlp.download.domain.service;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
@@ -59,6 +60,11 @@ public class DownloadRepositoryService {
         Resource resource = resourceRepository.findById(requestId)
             .orElseThrow(() -> new IllegalArgumentException("Resource not found with request ID: " + requestId));
         resource.setDeletedAt(Instant.now());
+    }
+
+    @Transactional
+    public void updateDeletedAtForResources(List<String> requestIds) {
+        resourceRepository.updateDeletedAtForResources(requestIds);
     }
 
     @Transactional

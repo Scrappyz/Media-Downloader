@@ -36,6 +36,7 @@ import com.scrappyz.ytdlp.download.domain.exception.custom.FailedProcessExceptio
 import com.scrappyz.ytdlp.download.domain.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ResourceNotFoundException;
+import com.scrappyz.ytdlp.download.domain.exception.custom.StorageFullException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.UnsupportedUrlException;
 import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpProcessResult;
@@ -176,6 +177,11 @@ public class YtdlpDownloadService implements DownloadService {
         DownloadResponse result = new DownloadResponse();
         String id = isPreviousRequest ? request.getUrl() : UlidCreator.getMonotonicUlid().toString();
         String status = "pending";
+
+        if(resourceHelper.isStorageFull()) {
+            log.info("[YtdlpDownloadService.enqueue] Storage is full. Rejecting new download request with ID " + id);
+            throw new StorageFullException("Storage is full. Please try again later.");
+        }
 
         if(isPreviousRequest) {
             log.info("[YtdlpDownloadService.enqueue] Previous request with ID " + id + " is being re-queued");

@@ -34,8 +34,11 @@ public class DownloadResourceHelper {
 
     private final DownloadRepositoryService downloadRepositoryService;
 
-    @Value("${resource.expiry.time}")
+    @Value("${resource.expiry-time}")
     private Duration resourceExpiryTime;
+
+    @Value("${resource.max-storage}")
+    private String maxStorage;
 
     private long occupiedStorage;
 
@@ -43,6 +46,35 @@ public class DownloadResourceHelper {
 
     public Duration getResourceExpiryTime() {
         return resourceExpiryTime;
+    }
+
+    public Long getMaxStorageSize() {
+        return parseStorageSize(maxStorage);
+    }
+
+    public Long getOccupiedStorage() {
+        return occupiedStorage;
+    }
+
+    private Long parseStorageSize(String storageSize) {
+        storageSize = storageSize.toLowerCase();
+        long multiplier = 1;
+
+        if(storageSize.endsWith("kb")) {
+            multiplier = 1024;
+        } else if(storageSize.endsWith("mb")) {
+            multiplier = 1024 * 1024;
+        } else if(storageSize.endsWith("gb")) {
+            multiplier = 1024 * 1024 * 1024;
+        } else if(storageSize.endsWith("tb")) {
+            multiplier = 1024L * 1024L * 1024L * 1024L;
+        }
+
+        return Long.parseLong(storageSize.replaceAll("[^\\d]", "")) * multiplier;
+    }
+
+    public boolean isStorageFull() {
+        return occupiedStorage >= getMaxStorageSize();
     }
 
     // Run the resource helper for throughout the whole runtime

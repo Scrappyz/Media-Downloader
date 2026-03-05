@@ -1,6 +1,8 @@
 package com.scrappyz.ytdlp.startup;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -39,21 +41,6 @@ public class YtdlpStartupListener implements ApplicationListener<ApplicationRead
     public void onApplicationEvent(ApplicationReadyEvent event) {
         boolean isEmpty = false;
 
-        // try(DirectoryStream<Path> dirStream = Files.newDirectoryStream(paths.getDownloadPath())) {
-        //     isEmpty = !dirStream.iterator().hasNext();
-        // } catch(IOException e) {
-        //     e.printStackTrace();
-        // }
-
-        // if(!isEmpty) {
-        //     log.info("[YtdlpStartupListener.onApplicationEvent] Emptying download directory contents on startup");
-        //     try {
-        //         FileUtils.cleanDirectory(paths.getDownloadPath().toFile());
-        //     } catch(IOException e) {
-        //         e.printStackTrace();
-        //     }
-        // }
-
         if(ytdlpProperties.isAutoUpdate()) {
             startupExecutor.execute(() -> {
                 List<String> commands = Arrays.asList(paths.getYtdlpBin().toString(), "-U");
@@ -73,12 +60,29 @@ public class YtdlpStartupListener implements ApplicationListener<ApplicationRead
             log.info("[YtdlpStartupListener.onApplicationEvent] Updating yt-dlp");
         }
 
-        List<Resource> deleteResources = resourceRepository.findAllNonDeletedExpiredResources();
-        for(int i = 0; i < deleteResources.size(); i++) {
-            String id = deleteResources.get(i).getRequestId();
-            log.info("[YtdlpStartupListener.onApplicationEvent] Removing resource: " + id);
-            resourceHelper.removeResource(id);
-            downloadRepositoryService.updateDeletedAtForResource(id);
+        List<Resource> resources = resourceRepository.findAllNonDeletedResources();
+        List<String> deletedResourceIds = new ArrayList<>();
+        for(int i = 0; i < resources.size(); i++) {
+            String id = resources.get(i).getRequestId();
+            Instant expireAt = resources.get(i).getExpireAt();
+            Instant deletedAt = resources.get(i).getDeletedAt();
+            boolean isExpired = expireAt.isBefore(Instant.now());
+            boolean isDeleted = deletedAt != null;
+
+            if(isExpired && !isDeleted) {
+                log.info("[YtdlpStartupListener.onApplicationEvent] Removing resource: " + id);
+                resourceHelper.removeResource(id);
+                deletedResourceIds.add(id);
+            }
+
+            if(!isExpired && !isDeleted) {
+                log.info("[YtdlpStartupListener.onApplicationEvent] Queuing resource for expiry: " + id);
+                resourceHelper.queue(id, expireAt, resources.get(i).getStorageUsed());
+            }
+        }
+
+        if(!deletedResourceIds.isEmpty()) {
+            downloadRepositoryService.updateDeletedAtForResources(deletedResourceIds);
         }
 
         startupExecutor.execute(() -> resourceHelper.run()); // Expire resources

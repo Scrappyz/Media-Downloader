@@ -15,6 +15,7 @@ import com.scrappyz.ytdlp.download.domain.exception.custom.FullDownloadQueueExce
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidProcessException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ResourceNotFoundException;
+import com.scrappyz.ytdlp.download.domain.exception.custom.StorageFullException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.UnsupportedUrlException;
 
 @RestControllerAdvice
@@ -85,5 +86,11 @@ public class GlobalExceptionHandler {
         ApiError error = new ApiError(e.getCode(), e.getMessage());
         return ResponseEntity.internalServerError().body(error);
     }
-    
+
+    @ExceptionHandler(StorageFullException.class)
+    public ResponseEntity<ApiError> handleStorageFull(StorageFullException e) {
+        ApiError error = new ApiError(e.getCode(), e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+
 }
