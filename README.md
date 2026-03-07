@@ -8,10 +8,8 @@ The API is open-source and free to use.
 ## Table of Contents
 - [Quick Demo](#quick-demo)
 - [Dependencies](#dependencies)
-  - [Frontend](#frontend)
-  - [Backend](#backend)
-- [Usage](#usage)
-  - [Running the Application](#running-the-application)
+- [Documentation](#documentation)
+  - [API Endpoints](#api-endpoints)
 
 ## Quick Demo
 [Watch Demo](https://github.com/user-attachments/assets/c486d42a-b81c-4d02-a74c-5bf06ac315c8) \
