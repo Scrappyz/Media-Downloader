@@ -1,6 +1,5 @@
 package com.scrappyz.ytdlp.download.domain.service.impl;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -19,14 +18,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.github.f4b6a3.ulid.Ulid;
 import com.github.f4b6a3.ulid.UlidCreator;
 import com.scrappyz.ytdlp.config.properties.DownloadProperties;
 import com.scrappyz.ytdlp.config.properties.PathProperties;
 import com.scrappyz.ytdlp.config.properties.YtdlpProperties;
-import com.scrappyz.ytdlp.download.api.dto.ApiError;
 import com.scrappyz.ytdlp.download.api.dto.DownloadRequest;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResponse;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResult;
@@ -644,62 +641,6 @@ public class YtdlpDownloadService implements DownloadService {
         }
 
         return Site.UNKNOWN;
-    }
-
-    private void sendSseError(DownloadErrorCode error, SseEmitter emitter) {
-        log.info("[YtdlpDownloadService.sendSseError] " + error);
-        try {
-            if(error == DownloadErrorCode.INVALID_URL) {
-                log.info("[YtdlpDownloadService.sendSseError] Invalid URL");
-                emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(new ApiError(DownloadErrorCode.INVALID_URL.getString(), "The URL provided is not valid"))
-                );
-            }
-
-            if(error == DownloadErrorCode.UNSUPPORTED_URL) {
-                log.info("[YtdlpDownloadService.sendSseError] Unsupported URL");
-                emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(new ApiError(DownloadErrorCode.UNSUPPORTED_URL.getString(), "The URL provided is not supported"))
-                );
-            }
-
-            if(error == DownloadErrorCode.FORMAT_UNAVAILABLE) {
-                log.info("[YtdlpDownloadService.sendSseError] Format unavailable");
-                emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(new ApiError(DownloadErrorCode.FORMAT_UNAVAILABLE.getString(), "The format requested is unavailable"))
-                );
-            }
-
-            if(error == DownloadErrorCode.POSTPROCESSING_ERROR) {
-                log.info("[YtdlpDownloadService.sendSseError] Postprocessing error");
-                emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(new ApiError(DownloadErrorCode.POSTPROCESSING_ERROR.getString(), "There was a problem in postprocessing"))
-                );
-            }
-
-            if(error == DownloadErrorCode.FAILED_UNEXPECTEDLY) {
-                log.info("[YtdlpDownloadService.sendSseError] Download has failed unexpectedly");
-                emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(new ApiError(DownloadErrorCode.FAILED_UNEXPECTEDLY.getString(), "Download has failed unexpectedly"))
-                );
-            }
-
-            if(error != DownloadErrorCode.NONE) {
-                emitter.complete();
-            }
-
-        } catch(IOException e) {
-            log.info("[YtdlpDownloadService.sendSseError] Failed to send download failed status via SseEmitter");
-            emitter.completeWithError(e);
-        } catch(IllegalStateException e) {
-            log.info("[YtdlpDownloadSe rvice.sendSseError] Emitter has already completed");
-        }
-
     }
     // ---HELPER METHODS---
 
