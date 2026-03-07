@@ -1,9 +1,12 @@
 # CHANGELOG
 
-## [1.1.0] - TBR
-### To be added
+## [1.1.0] - 2026/02/07
+### Added
+- Implemented database persistence.
 - Storage limit functionality.
-- Retrieve resource via Request ID.
+- Added new field for generated request ID.
+- Implemented download continuation on ongoing requests via request ID.
+- Implemented request and forget functionality by using request ID to retrieve download request and file.
 
 ## [1.0.1] - 2025/12/17
 ### Added
