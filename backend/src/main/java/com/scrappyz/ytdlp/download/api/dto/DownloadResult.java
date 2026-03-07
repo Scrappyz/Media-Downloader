@@ -10,7 +10,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class DownloadResult {
     
-    String status; // success | failed | queued | pending | invalid
+    String status;
     String message;
 
 }
