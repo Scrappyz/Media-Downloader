@@ -81,5 +81,5 @@ Retrieves the downloaded file associated with the request ID if finished.
 A video or audio file.
 
 #### `/downloads/{requestId}`
-**HTTP:** `DELETE`
+**HTTP:** `DELETE` \
 Cancels an ongoing request via request ID.
