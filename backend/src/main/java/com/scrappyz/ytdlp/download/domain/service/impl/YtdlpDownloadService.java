@@ -284,7 +284,7 @@ public class YtdlpDownloadService implements DownloadService {
 
         // Compile commands
         List<String> commands = new ArrayList<>();
-        commands.add(paths.getYtdlpBin().toString());
+        commands.add(paths.getYtdlpBinPath().toString());
         if(ytdlpProperties.isUseCookies()) {
             log.info("[YtdlpDownloadService.download] Cookies Path: " + ytdlpProperties.getCookiesPath());
             if(ytdlpProperties.getCookiesPath() == null || ytdlpProperties.getCookiesPath().isEmpty()) { // Use browser

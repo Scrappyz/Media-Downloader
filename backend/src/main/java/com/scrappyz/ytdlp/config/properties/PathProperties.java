@@ -14,26 +14,25 @@ import lombok.Setter;
 @Getter @Setter
 public class PathProperties {
     
-    private Path binPath;
-    private Path ytdlpBin;
+    private String ytdlpBinName;
+    private Path ytdlpBinPath;
     private Path downloadPath;
 
     @PostConstruct
     public void init() {
         String bin;
         
-        // Removed unused variable 'bin'
         String os = System.getProperty("os.name", "unknown").toLowerCase();
 
         if(os.contains("win")) {
-            bin = "yt-dlp.exe";
+            bin = String.format("windows/%s.exe", ytdlpBinName);
         } else if(os.contains("mac") || os.contains("darwin")) {
-            bin = "yt-dlp_mac";
+            bin = String.format("mac/%s", ytdlpBinName);
         } else {
-            bin = "yt-dlp_linux";
+            bin = String.format("linux/%s", ytdlpBinName);
         }
 
-        ytdlpBin = ytdlpBin.resolve(bin).normalize();
+        ytdlpBinPath = ytdlpBinPath.resolve(bin).normalize();
     }
     
 }
