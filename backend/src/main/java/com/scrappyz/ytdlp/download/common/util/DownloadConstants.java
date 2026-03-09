@@ -6,19 +6,37 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class DownloadConstants {
+
     public static final SortedSet<Integer> VIDEO_QUALITY = new TreeSet<>(
         Arrays.asList(144, 240, 360, 480, 720, 1080, 2140)
+    );
+
+    public static final SortedSet<String> VIDEO_QUALITY_OPTION = new TreeSet<>(
+        Arrays.asList("worst", "144p", "240p", "360p", "480p", "720p", "1080p", "2140p", "best")
     );
 
     public static final SortedSet<Integer> AUDIO_QUALITY = new TreeSet<>(
         Arrays.asList(128, 192, 256, 320)
     );
 
+    public static final SortedSet<String> AUDIO_QUALITY_OPTION = new TreeSet<>(
+        Arrays.asList("worst", "128kbps", "192kbps", "256kbps", "320kbps", "best")
+    );
+
     public static final HashSet<String> VIDEO_FORMAT = new HashSet<>(
         Arrays.asList("mp4", "mkv")
+    );
+
+    public static final HashSet<String> VIDEO_FORMAT_OPTION = new HashSet<>(
+        Arrays.asList("mp4", "mkv", "default")
     );
 
     public static final HashSet<String> AUDIO_FORMAT = new HashSet<>(
         Arrays.asList("flac", "m4a", "mp3")
     );
+
+    public static final HashSet<String> AUDIO_FORMAT_OPTION = new HashSet<>(
+        Arrays.asList("flac", "m4a", "mp3", "default")
+    );
+
 }
