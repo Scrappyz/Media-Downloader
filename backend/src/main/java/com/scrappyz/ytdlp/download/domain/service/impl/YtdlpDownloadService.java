@@ -5,12 +5,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 
 import org.springframework.beans.factory.ObjectProvider;
@@ -27,6 +23,8 @@ import com.scrappyz.ytdlp.config.properties.YtdlpProperties;
 import com.scrappyz.ytdlp.download.api.dto.DownloadRequest;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResponse;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResult;
+import com.scrappyz.ytdlp.download.common.util.DownloadConstants;
+import com.scrappyz.ytdlp.download.common.util.DownloadUtil;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ExpiredResourceException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FailedProcessException;
@@ -78,21 +76,6 @@ public class YtdlpDownloadService implements DownloadService {
     private final YtdlpDownloadProcessHandler downloadProcessHandler;
 
     // Constants
-    private static final SortedSet<Integer> videoQuality = new TreeSet<>(
-        Arrays.asList(144, 240, 360, 480, 720, 1080, 2140) // height in pixels (p)
-    );
-
-    private static final SortedSet<Integer> audioQuality = new TreeSet<>(
-        Arrays.asList(128, 192, 256, 320) // bitrate in kbps
-    );
-
-    private static final HashSet<String> videoFormat = new HashSet<>(
-        Arrays.asList("mp4", "mkv")
-    );
-
-    private static final HashSet<String> audioFormat = new HashSet<>(
-        Arrays.asList("flac", "m4a", "mp3")
-    );
 
     public enum Site {
         YOUTUBE("youtube"),
@@ -262,10 +245,10 @@ public class YtdlpDownloadService implements DownloadService {
 
         String url = request.getUrl();
         String type = request.getRequestType();
-        String vidFormat = resolveVideoFormat(request.getVideoFormat()); 
-        String vidQuality = resolveVideoQuality(request.getVideoQuality());
-        String audQuality = resolveAudioQuality(request.getAudioQuality());
-        String audFormat = resolveAudioFormat(request.getAudioFormat());
+        String vidFormat = DownloadUtil.resolveVideoFormat(request.getVideoFormat()); 
+        String vidQuality = DownloadUtil.resolveVideoQuality(request.getVideoQuality());
+        String audQuality = DownloadUtil.resolveAudioQuality(request.getAudioQuality());
+        String audFormat = DownloadUtil.resolveAudioFormat(request.getAudioFormat());
 
         if(url.isEmpty()) {
             throw new InvalidUrlException("The URL provided is empty");
@@ -402,113 +385,6 @@ public class YtdlpDownloadService implements DownloadService {
     }
 
     // ---HELPER METHODS---
-    public static String resolveVideoQuality(String vidQuality) {
-        if(vidQuality == null || vidQuality.isEmpty()) {
-            return "best";
-        }
-
-        vidQuality = vidQuality.trim().toLowerCase();
-
-        if(vidQuality.equals("best")) {
-            return "best";
-        }
-
-        if(vidQuality.equals("worst")) {
-            return "worst";
-        }
-
-        vidQuality = vidQuality.replaceAll("[^0-9]", ""); // Remove non-numeric characters
-
-        int numericQuality = Integer.parseInt(vidQuality);
-        vidQuality = String.valueOf(numericQuality);
-
-        Iterator<Integer> iterator = videoQuality.iterator();
-        int firstValue = iterator.next();
-
-        if(numericQuality < firstValue) return String.valueOf(firstValue);
-
-        if(videoQuality.contains(numericQuality)) return vidQuality;
-
-        // Get the nearest video quality
-        int prev = -1;
-        for(int i : videoQuality) {
-            if(i == firstValue) {
-                prev = i;
-                continue;
-            }
-
-            if(numericQuality > prev && numericQuality < i) {
-                numericQuality = prev;
-                break;
-            }
-
-            prev = i;
-        }
-
-        return String.valueOf(numericQuality);
-    }
-
-    public static String resolveAudioQuality(String audQuality) {
-        if(audQuality == null || audQuality.isEmpty()) {
-            return "best";
-        }
-
-        audQuality = audQuality.trim().toLowerCase();
-
-        if(audQuality.equals("best")) {
-            return "best";
-        }
-
-        if(audQuality.equals("worst")) {
-            return "worst";
-        }
-
-        audQuality = audQuality.replaceAll("[^0-9]", ""); // Remove non-numeric characters
-
-        int numericQuality = Integer.parseInt(audQuality);
-        audQuality = String.valueOf(numericQuality);
-
-        Iterator<Integer> iterator = audioQuality.iterator();
-        int firstValue = iterator.next();
-
-        if(numericQuality < firstValue) return String.valueOf(firstValue);
-
-        if(audioQuality.contains(numericQuality)) return audQuality;
-
-        // Get the nearest video quality
-        int prev = -1;
-        for(int i : audioQuality) {
-            if(i == firstValue) {
-                prev = i;
-                continue;
-            }
-
-            if(numericQuality > prev && numericQuality < i) {
-                numericQuality = prev;
-                break;
-            }
-
-            prev = i;
-        }
-
-        return String.valueOf(numericQuality);
-    }
-
-    public static String resolveVideoFormat(String videoFormat) {
-        if(videoFormat == null || videoFormat.isEmpty() || videoFormat.equals("Default")) {
-            return "default";
-        }
-
-        return videoFormat;
-    }
-
-    public static String resolveAudioFormat(String audioFormat) {
-        if(audioFormat == null || audioFormat.isEmpty() || audioFormat.equals("Default")) {
-            return "default";
-        }
-
-        return audioFormat;
-    }
 
     private String resolveCommandFormat(RequestType type, Site site, String vidFormat, String vidQuality, String audQuality, String audFormat) {
         
@@ -516,12 +392,12 @@ public class YtdlpDownloadService implements DownloadService {
         boolean isVideoOnly = type == RequestType.VIDEO_ONLY;
         boolean isAudioOnly = type == RequestType.AUDIO_ONLY;
 
-        if((isVideo || isVideoOnly) && !vidFormat.equals("default") && !videoFormat.contains(vidFormat)) {
+        if((isVideo || isVideoOnly) && !vidFormat.equals("default") && !DownloadConstants.VIDEO_FORMAT.contains(vidFormat)) {
             log.info("[YtdlpDownloadService.resolveCommandFormat] '" + vidFormat + "' is not available");
             throw new FormatUnavailableException("'" + vidFormat + "' is not available");
         }
 
-        if(isAudioOnly && !audFormat.equals("default") && !audioFormat.contains(audFormat)) {
+        if(isAudioOnly && !audFormat.equals("default") && !DownloadConstants.AUDIO_FORMAT.contains(audFormat)) {
             log.info("[YtdlpDownloadService.resolveCommandFormat] '" + audFormat + "' is not available");
             throw new FormatUnavailableException("'" + audFormat + "' is not available");
         }
