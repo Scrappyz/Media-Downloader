@@ -3,11 +3,11 @@ package com.scrappyz.ytdlp.download.domain.exception.custom;
 public class DownloadFailedException extends ApiException {
 
     public DownloadFailedException() {
-        super("download_failed", "Download failed unexpectedly");
+        super("DOWNLOAD_FAILED", "Download failed unexpectedly");
     }
 
     public DownloadFailedException(String message) {
-        super("download_failed", message);
+        super("DOWNLOAD_FAILED", message);
     }
 
 }

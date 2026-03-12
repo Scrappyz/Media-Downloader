@@ -3,11 +3,11 @@ package com.scrappyz.ytdlp.download.domain.exception.custom;
 public class FullDownloadQueueException extends ApiException {
     
     public FullDownloadQueueException() {
-        super("too_many_requests", "Download queue is full");
+        super("FULL_DOWNLOAD_QUEUE", "Download queue is full");
     }
 
     public FullDownloadQueueException(String message) {
-        super("too_many_requests", message);
+        super("FULL_DOWNLOAD_QUEUE", message);
     }
 
 }

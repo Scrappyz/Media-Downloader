@@ -9,12 +9,12 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.scrappyz.ytdlp.download.api.dto.ApiError;
 import com.scrappyz.ytdlp.download.api.dto.DownloadProgressResponse;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResult;
+import com.scrappyz.ytdlp.download.domain.enums.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FailedProcessException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.UnsupportedUrlException;
-import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.model.DownloadProgress;
 import com.scrappyz.ytdlp.download.domain.model.SseStatus;
 

@@ -1,5 +1,7 @@
 package com.scrappyz.ytdlp.download.domain.model;
 
+import com.scrappyz.ytdlp.download.domain.enums.DownloadErrorCode;
+
 public class YtdlpProcessResult {
     
     private DownloadErrorCode error;

@@ -3,11 +3,11 @@ package com.scrappyz.ytdlp.download.domain.exception.custom;
 public class FailedProcessException extends ApiException {
     
     public FailedProcessException() {
-        super("internal_error", "The process failed unexpectedly");
+        super("INTERNAL_ERROR", "The process failed unexpectedly");
     }
 
     public FailedProcessException(String message) {
-        super("internal_error", message);
+        super("INTERNAL_ERROR", message);
     }
 
 }

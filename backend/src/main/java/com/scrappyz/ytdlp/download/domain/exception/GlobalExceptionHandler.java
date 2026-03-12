@@ -1,4 +1,4 @@
-package com.scrappyz.ytdlp.download.domain.exception.handler;
+package com.scrappyz.ytdlp.download.domain.exception;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,6 +13,7 @@ import com.scrappyz.ytdlp.download.domain.exception.custom.FailedProcessExceptio
 import com.scrappyz.ytdlp.download.domain.exception.custom.FormatUnavailableException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FullDownloadQueueException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidProcessException;
+import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUlidException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.InvalidUrlException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ResourceNotFoundException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.StorageFullException;
@@ -89,6 +90,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(StorageFullException.class)
     public ResponseEntity<ApiError> handleStorageFull(StorageFullException e) {
+        ApiError error = new ApiError(e.getCode(), e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(InvalidUlidException.class)
+    public ResponseEntity<ApiError> handleInvalidUlid(InvalidUlidException e) {
         ApiError error = new ApiError(e.getCode(), e.getMessage());
         return ResponseEntity.badRequest().body(error);
     }

@@ -13,8 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.scrappyz.ytdlp.download.domain.enums.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
-import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.model.DownloadProgress;
 import com.scrappyz.ytdlp.download.domain.model.SseStatus;
 import com.scrappyz.ytdlp.download.domain.model.YtdlpDownloadProcess;

@@ -1,14 +1,14 @@
-package com.scrappyz.ytdlp.download.domain.model;
+package com.scrappyz.ytdlp.download.domain.enums;
 
 import java.util.HashMap;
 
 public enum DownloadErrorCode {
-    NONE("none"),
-    UNSUPPORTED_URL("unsupported_url"),
-    INVALID_URL("invalid_url"),
-    FORMAT_UNAVAILABLE("format_unavailable"),
-    POSTPROCESSING_ERROR("postprocessing_error"),
-    FAILED_UNEXPECTEDLY("failed_unexpectedly");
+    NONE("NONE"),
+    UNSUPPORTED_URL("UNSUPPORTED_URL"),
+    INVALID_URL("INVALID_URL"),
+    FORMAT_UNAVAILABLE("FORMAT_UNAVAILABLE"),
+    POSTPROCESSING_ERROR("POSTPROCESSING_ERROR"),
+    FAILED_UNEXPECTEDLY("FAILED_UNEXPECTEDLY");
 
     private final String string;
     private static final HashMap<String, DownloadErrorCode> byString = new HashMap<>();

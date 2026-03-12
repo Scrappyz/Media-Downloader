@@ -2,8 +2,8 @@ package com.scrappyz.ytdlp.download.domain.service.helper;
 
 import java.util.List;
 
+import com.scrappyz.ytdlp.download.domain.enums.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
-import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
 
 public interface DownloadProcessHandler<T> {
 

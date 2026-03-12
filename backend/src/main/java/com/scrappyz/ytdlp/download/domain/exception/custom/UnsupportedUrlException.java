@@ -3,11 +3,11 @@ package com.scrappyz.ytdlp.download.domain.exception.custom;
 public class UnsupportedUrlException extends ApiException {
     
     public UnsupportedUrlException() {
-        super("unsupported_url", "The given URL is not supported");
+        super("UNSUPPORTED_URL", "The given URL is not supported");
     }
 
     public UnsupportedUrlException(String message) {
-        super("unsupported_url", message);
+        super("UNSUPPORTED_URL", message);
     }
 
 }

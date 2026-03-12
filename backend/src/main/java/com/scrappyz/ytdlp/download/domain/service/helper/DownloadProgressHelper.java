@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import com.scrappyz.ytdlp.config.properties.DownloadProperties;
-import com.scrappyz.ytdlp.download.domain.model.DownloadErrorCode;
+import com.scrappyz.ytdlp.download.domain.enums.DownloadErrorCode;
 import com.scrappyz.ytdlp.download.domain.service.DownloadSseService;
 import com.scrappyz.ytdlp.download.domain.service.impl.YtdlpDownloadService;
 

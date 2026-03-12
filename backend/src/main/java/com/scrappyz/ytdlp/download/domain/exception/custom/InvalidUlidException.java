@@ -3,11 +3,11 @@ package com.scrappyz.ytdlp.download.domain.exception.custom;
 public class InvalidUlidException extends ApiException {
     
     public InvalidUlidException() {
-        super("invalid_ulid", "Invalid ULID provided");
+        super("INVALID_ULID", "Invalid ULID provided");
     }
 
     public InvalidUlidException(String message) {
-        super("invalid_ulid", message);
+        super("INVALID_ULID", message);
     }
     
 }
