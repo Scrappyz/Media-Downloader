@@ -1,9 +1,9 @@
-package com.scrappyz.ytdlp.download.infrastructure.model;
+package com.scrappyz.ytdlp.download.domain.enums;
 
 public enum RequestType {
-    VIDEO("video"),
-    VIDEO_ONLY("video_only"),
-    AUDIO_ONLY("audio_only");
+    VIDEO("VIDEO"),
+    VIDEO_ONLY("VIDEO_ONLY"),
+    AUDIO_ONLY("AUDIO_ONLY");
 
     private final String value;
 
@@ -11,11 +11,11 @@ public enum RequestType {
         this.value = value;
     }
 
-    public String getValue() {
+    public String getString() {
         return value;
     }
 
-    public static RequestType fromValue(String value) {
+    public static RequestType getValue(String value) {
         for(RequestType type : RequestType.values()) {
             if(type.value.equalsIgnoreCase(value)) {
                 return type;

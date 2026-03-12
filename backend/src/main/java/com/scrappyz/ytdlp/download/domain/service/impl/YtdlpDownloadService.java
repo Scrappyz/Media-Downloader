@@ -25,6 +25,8 @@ import com.scrappyz.ytdlp.download.api.dto.DownloadResponse;
 import com.scrappyz.ytdlp.download.api.dto.DownloadResult;
 import com.scrappyz.ytdlp.download.common.util.DownloadConstants;
 import com.scrappyz.ytdlp.download.common.util.DownloadUtil;
+import com.scrappyz.ytdlp.download.domain.enums.DownloadStatus;
+import com.scrappyz.ytdlp.download.domain.enums.RequestType;
 import com.scrappyz.ytdlp.download.domain.exception.custom.DownloadFailedException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.ExpiredResourceException;
 import com.scrappyz.ytdlp.download.domain.exception.custom.FailedProcessException;
@@ -44,7 +46,6 @@ import com.scrappyz.ytdlp.download.domain.service.helper.YtdlpDownloadProcessHan
 import com.scrappyz.ytdlp.download.infrastructure.entity.Request;
 import com.scrappyz.ytdlp.download.infrastructure.entity.RequestDetail;
 import com.scrappyz.ytdlp.download.infrastructure.entity.Resource;
-import com.scrappyz.ytdlp.download.infrastructure.model.RequestType;
 import com.scrappyz.ytdlp.download.infrastructure.repository.RequestRepository;
 import com.scrappyz.ytdlp.download.infrastructure.repository.ResourceRepository;
 
@@ -75,8 +76,6 @@ public class YtdlpDownloadService implements DownloadService {
     private final DownloadResourceHelper resourceHelper;
     private final YtdlpDownloadProcessHandler downloadProcessHandler;
 
-    // Constants
-
     public enum Site {
         YOUTUBE("youtube"),
         FACEBOOK("facebook"),
@@ -104,8 +103,6 @@ public class YtdlpDownloadService implements DownloadService {
             return byString.get(str);
         }
     }
-
-    
 
     private Request createRequestEntity(String id, String status, DownloadRequest request) {
         Request req = new Request();
@@ -156,7 +153,7 @@ public class YtdlpDownloadService implements DownloadService {
         
         DownloadResponse result = new DownloadResponse();
         String id = isPreviousRequest ? request.getUrl() : UlidCreator.getMonotonicUlid().toString();
-        String status = "pending";
+        String status = DownloadStatus.PENDING.getString();
 
         if(resourceHelper.isStorageFull()) {
             log.info("[YtdlpDownloadService.enqueue] Storage is full. Rejecting new download request with ID " + id);
@@ -182,13 +179,13 @@ public class YtdlpDownloadService implements DownloadService {
 
         } else {
             // Set as 'pending' in the database
-            Request req = createRequestEntity(id, "pending", request);
+            Request req = createRequestEntity(id, DownloadStatus.PENDING.getString(), request);
             downloadRepositoryService.addNewRequest(req);
         }
 
-        if(status.equals("ongoing")) {
+        if(status.equals(DownloadStatus.ONGOING.getString())) {
             sseService.addEmitter(id, downloadProperties.getTimeout().toMillis());
-        } else if(!status.equals("completed")) { // If the request is not already completed or ongoing, start the download process
+        } else if(!status.equals(DownloadStatus.COMPLETED.getString())) { // If the request is not already completed or ongoing, start the download process
             sseService.addEmitter(id, downloadProperties.getTimeout().toMillis());
             downloadExecutor.submit(() -> download(id, request));
         }
@@ -239,7 +236,7 @@ public class YtdlpDownloadService implements DownloadService {
     private void download(String id, DownloadRequest request) 
         throws InvalidUrlException, UnsupportedUrlException, FormatUnavailableException, DownloadFailedException, FailedProcessException {
 
-        DownloadResult result = new DownloadResult("pending", "Download is pending");
+        DownloadResult result = new DownloadResult(DownloadStatus.PENDING.getString(), "Download is pending");
 
         sseService.sendStatus(id, result.getStatus(), result.getMessage());
 
@@ -258,7 +255,7 @@ public class YtdlpDownloadService implements DownloadService {
 
         log.info("[YtdlpDownloadService.download] Downloading: " + url);
 
-        RequestType t = RequestType.fromValue(type);
+        RequestType t = RequestType.getValue(type);
 
         String format = resolveCommandFormat(t, site, vidFormat, vidQuality, audQuality, audFormat);
         log.info("[YtdlpDownloadService.download] Command Format: " + format);
@@ -289,7 +286,7 @@ public class YtdlpDownloadService implements DownloadService {
 
         // Set request as 'ongoing' in database
         try {
-            downloadRepositoryService.updateRequestStatusById(id, "ongoing");
+            downloadRepositoryService.updateRequestStatusById(id, DownloadStatus.ONGOING.getString());
         } catch(Exception e) {
             log.info("[YtdlpDownloadService.download] Failed to update request status to ongoing for request ID " + id);
         }
@@ -313,13 +310,13 @@ public class YtdlpDownloadService implements DownloadService {
             downloadProcessHandler.removeProcessById(id);
             sseService.completeEmitter(id);
             sseService.removeEmitter(id);
-            downloadRepositoryService.updateRequestStatusById(id, "failed");
+            downloadRepositoryService.updateRequestStatusById(id, DownloadStatus.FAILED.getString());
             throw new DownloadFailedException();
         }
 
         if(downloadProcessHandler.isProcessCancelled(id)) {
             log.info("[YtdlpDownloadService.download] Download with ID " + id + " was cancelled");
-            result.setStatus("cancelled");
+            result.setStatus(DownloadStatus.CANCELLED.getString());
             result.setMessage("Download was cancelled");
 
             sseService.sendStatus(id, result.getStatus(), result.getMessage());
@@ -327,7 +324,7 @@ public class YtdlpDownloadService implements DownloadService {
             downloadProcessHandler.removeProcessById(id);
 
             // Set request to 'cancelled' in database
-            downloadRepositoryService.updateRequestStatusById(id, "cancelled");
+            downloadRepositoryService.updateRequestStatusById(id, DownloadStatus.CANCELLED.getString());
 
             sseService.completeEmitter(id);
             sseService.removeEmitter(id);
@@ -355,7 +352,7 @@ public class YtdlpDownloadService implements DownloadService {
         // ========DOWNLOAD COMPLETED SUCCESSFULLY========
         log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
 
-        result.setStatus("completed");
+        result.setStatus(DownloadStatus.COMPLETED.getString());
         result.setMessage("Download has finished");
 
         log.info("[YtdlpDownloadService.download] Download with ID " + id + " has finished");
