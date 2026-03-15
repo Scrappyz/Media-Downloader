@@ -1,0 +1,26 @@
+<div class="custom-input" [ngStyle]="{'width': width()}">
+  @if (label()) {
+    <label>{{label()}} <span class="asterisk">{{asterisk() ? '*' : ''}}</span></label>
+  }
+  <div [ngStyle]="{'display': 'flex'}">
+    <input
+      class="input-box"
+      [ngStyle]="rightBtn() ?
+      {'width': totalInputWidth(), 'border-right': 'none',  'border-radius': '2px 0px 0px 2px'}
+      : {'width': totalInputWidth(),  'border-radius': '2px 0px 0px 2px'}"
+      type="text"
+      [placeholder]="placeholder()"
+      [formControl]="control()"
+    >
+    @if (rightBtn()) {
+      <button
+        class="btn-primary"
+        [ngStyle]="{
+          'width': (rightBtn()?.widthPercentage + '%'),
+          'border-radius': '0px 2px 2px 0px'
+        }"
+        (click)="onRightBtnPress()"
+      >{{rightBtn()?.label}}</button>
+    }
+  </div>
+</div>

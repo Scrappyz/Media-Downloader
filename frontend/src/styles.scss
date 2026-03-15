@@ -1,0 +1,37 @@
+/* You can add global styles to this file, and also import other style files */
+
+$font-primary: sans-serif;
+$font-primary-size: 14px;
+
+$colors: (
+  primary: (red),
+  light: (white),
+  dark: (gray)
+);
+
+body {
+  font-family: $font-primary;
+  font-size: $font-primary-size;
+  margin: 0;
+  padding: 0;
+}
+
+.btn-primary {
+  background-color: nth(map-get($colors, primary), 1);
+  color: nth(map-get($colors, light), 1);
+  border: 0;
+  font-family: $font-primary;
+  font-size: $font-primary-size;
+}
+
+.input-box {
+  border-style: solid;
+  border-color: gray;
+  border-width: 1px;
+  height: 35px;
+  font-family: $font-primary;
+  font-size: $font-primary-size;
+  outline: none;
+  padding-left: 5px;
+  padding-right: 5px;
+}

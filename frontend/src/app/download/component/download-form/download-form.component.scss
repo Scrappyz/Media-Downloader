@@ -1,0 +1,17 @@
+$row-gap: 15px;
+
+.main {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  justify-content: center;
+  row-gap: $row-gap;
+  width: 100%;
+}
+
+.format-options {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 30px;
+  row-gap: $row-gap;
+}

@@ -1,0 +1,57 @@
+<div class="main">
+  <custom-dropdown
+    [control]="form.controls.type"
+    [label]="'Type'"
+    [asterisk]="true"
+    [options]="typeOptions"
+  ></custom-dropdown>
+  <custom-input
+    [control]="form.controls.url"
+    [label]="'URL / Request ID'"
+    [asterisk]="true"
+    [placeholder]="'Enter your URL or Request ID here'"
+    [rightBtn]="{label: 'Paste', widthPercentage: 25}"
+    (rightBtnPressed)="onPaste()"
+  ></custom-input>
+  <div class="format-options">
+    @if (form.controls.type.value === 'AUDIO_ONLY') {
+      <custom-dropdown
+        [label]="'Audio Quality'"
+        [asterisk]="true"
+        [control]="form.controls.audio.controls.quality"
+        [options]="audioQualityOptions"
+      ></custom-dropdown>
+      <custom-dropdown
+        [label]="'Audio Format'"
+        [asterisk]="true"
+        [control]="form.controls.audio.controls.format"
+        [options]="audioFormatOptions"
+      ></custom-dropdown>
+    } @else {
+      <custom-dropdown
+        [label]="'Video Quality'"
+        [asterisk]="true"
+        [control]="form.controls.video.controls.quality"
+        [options]="videoQualityOptions"
+      ></custom-dropdown>
+      <custom-dropdown
+        [label]="'Video Format'"
+        [asterisk]="true"
+        [control]="form.controls.video.controls.format"
+        [options]="videoFormatOptions"
+      ></custom-dropdown>
+    }
+    <custom-dropdown
+      [label]="'Embed Metadata'"
+      [asterisk]="true"
+      [control]="form.controls.metadata"
+      [options]="metadataOptions"
+    ></custom-dropdown>
+    <custom-input
+      [control]="form.controls.outputName"
+      [label]="'Output Name'"
+      [placeholder]="'Enter file name here'"
+      [width]="'100%'"
+    ></custom-input>
+  </div>
+</div>

@@ -1,0 +1,10 @@
+<div class="custom-input" [ngStyle]="{'width': width()}">
+  @if (label()) {
+    <label>{{label()}} <span class="asterisk">{{asterisk() ? '*' : ''}}</span></label>
+  }
+  <select class="input-box" [formControl]="control()">
+    @for (option of options(); track $index) {
+      <option [ngValue]="option.value">{{option.label}}</option>
+    }
+  </select>
+</div>
