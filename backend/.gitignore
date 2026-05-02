@@ -35,3 +35,5 @@ build/
 bin/**/ff*
 temp/**
 storage/**
+
+.env*
